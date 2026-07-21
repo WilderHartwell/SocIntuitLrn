@@ -3,460 +3,1042 @@
 <head>
   <meta charset="UTF-8">
   <title>Circular Equation Simulation</title>
+  <script src="https://unpkg.com/jspsych@8.2.2"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@2.1.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-button-response@2.1.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-survey-multi-choice@2.1.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-preload@2.1.0"></script>
+  <script src="https://unpkg.com/@jspsych-contrib/plugin-pipe"></script>
+  <link href="https://unpkg.com/jspsych@8.2.2/css/jspsych.css" rel="stylesheet" type="text/css"/>
   <style>
-    :root {
-      --bg: #0f1117;
-      --panel: #1a1d27;
-      --border: #2a2d3e;
-      --accent: #7c6af7;
-      --accent2: #4ecdc4;
-      --accent3: #f7c948;
-      --text: #e8e9f0;
-      --muted: #6b6e87;
-      --neg: #f06a6a;
-      --pos: #4ecdc4;
-      --font-mono: 'JetBrains Mono', 'Fira Mono', 'Consolas', monospace;
-      --font-ui: 'Inter', 'Segoe UI', system-ui, sans-serif;
-    }
-    body { background: var(--bg); color: var(--text); font-family: var(--font-ui); margin: 0; }
-    #jspsych-target { background: var(--bg) !important; }
-    .jspsych-display-element { background: var(--bg) !important; }
+  .jspsych-content {
+    max-width: none !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
 
-    .trial-wrap {
-      display: flex; flex-direction: column; align-items: center;
-      padding: 20px 16px 16px; gap: 16px; max-width: 860px; margin: 0 auto;
-    }
-    .trial-num { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-    .trial-num span { color: var(--accent); font-weight: 700; }
+  .jspsych-display-element {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
 
-    .stim-row {
-      display: flex; gap: 18px; align-items: flex-start;
-      justify-content: center; width: 100%; flex-wrap: wrap;
-    }
-    .stim-col { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-    .stim-col-label { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-
-    .scen-video {
-      width: 320px; height: 200px; border-radius: 10px;
-      border: 2px solid var(--accent); background: #000; object-fit: cover; display: block;
-    }
-    .scen-val-badge {
-      font-family: var(--font-mono); font-size: 13px; color: var(--accent);
-      background: rgba(124,106,247,.12); padding: 2px 10px; border-radius: 6px;
-    }
-    .out-img {
-      width: 140px; height: 140px; object-fit: cover;
-      border-radius: 10px; border: 2px solid var(--accent2); display: block;
-    }
-    .out-val-badge {
-      font-family: var(--font-mono); font-size: 13px; color: var(--accent2);
-      background: rgba(78,205,196,.12); padding: 2px 10px; border-radius: 6px;
-    }
-
-    .resp-section { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-    .resp-section-label { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-    .resp-btns { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
-    .resp-card {
-      display: flex; flex-direction: column; align-items: center; gap: 6px;
-      background: var(--panel); border: 2px solid var(--border);
-      border-radius: 10px; padding: 8px;
-      transition: border-color .15s, background .15s, transform .1s;
-    }
-    .resp-card.active {
-      border-color: var(--accent3); background: rgba(247,201,72,.12); transform: scale(1.05);
-    }
-    .resp-card img { width: 100px; height: 100px; object-fit: cover; border-radius: 7px; display: block; }
-    .resp-card-label { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
-    .resp-key {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 28px; height: 28px; border-radius: 6px;
-      border: 2px solid var(--accent3); background: rgba(247,201,72,.10);
-      font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--accent3);
-    }
-
-    .info-chip {
-      background: var(--panel); border: 1px solid var(--border); border-radius: 7px;
-      padding: 5px 12px; font-family: var(--font-mono); font-size: 12px;
-    }
-    .info-chip .lbl { color: var(--muted); margin-right: 5px; }
-    .info-chip .val { color: var(--accent3); font-weight: 700; }
-
-    .prev-strip { font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
-
-    .eq-panel {
-      background: var(--panel); border: 1px solid var(--border);
-      border-radius: 10px; padding: 12px 18px; width: 100%; max-width: 560px;
-    }
-    .eq-row { display: flex; align-items: center; gap: 10px; margin: 5px 0; font-family: var(--font-mono); font-size: 12px; }
-    .eq-label { color: var(--muted); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; min-width: 58px; }
-    .eq-expr { color: var(--text); }
-
-    svg.dial text { font-family: var(--font-mono); }
-
-    .results-wrap { padding: 28px 16px; max-width: 960px; margin: 0 auto; }
-    .results-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
-    .results-sub { color: var(--muted); font-size: 13px; margin-bottom: 22px; }
-    table.log { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 12px; }
-    table.log th {
-      background: var(--panel); color: var(--muted); font-size: 10px;
-      letter-spacing: .08em; text-transform: uppercase;
-      padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--border);
-    }
-    table.log th:first-child { text-align: center; }
-    table.log td { padding: 7px 10px; text-align: right; border-bottom: 1px solid rgba(42,45,62,.6); }
-    table.log td:first-child { text-align: center; color: var(--muted); }
-    table.log tr:hover td { background: rgba(124,106,247,.05); }
-    .pos-cell { color: var(--pos); }
-    .neg-cell { color: var(--neg); }
-    .zero-cell { color: var(--muted); }
-    .acc-cell { color: var(--accent); }
-    .sc-cell { color: var(--accent3); }
-
-    .dl-btn {
-      margin-top: 8px; padding: 10px 28px; border-radius: 8px; border: none;
-      background: var(--accent); color: #fff; font-family: var(--font-ui);
-      font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity .15s;
-    }
-    .dl-btn:hover { opacity: .85; }
-  </style>
+  .jspsych-content-wrapper {
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+    padding-top: 10px !important;
+  }
+</style>
 </head>
-<body>
-<div id="jspsych-target"></div>
-
+<body></body>
 <script>
-/* ── Load jsPsych scripts dynamically, then boot ── */
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = src;
-    s.onload = resolve;
-    s.onerror = reject;
-    document.head.appendChild(s);
-  });
-}
-function loadCSS(href) {
-  const l = document.createElement('link');
-  l.rel = 'stylesheet'; l.href = href;
-  document.head.appendChild(l);
-}
 
-loadCSS('https://unpkg.com/jspsych@7.3.4/css/jspsych.css');
+// Get Prolific ID from URL
+const urlParams = new URLSearchParams(window.location.search);
+const prolific_pid = urlParams.get('PROLIFIC_PID');
 
-Promise.all([
-  loadScript('https://unpkg.com/jspsych@7.3.4/jspsych.js'),
-]).then(() => Promise.all([
-  loadScript('https://unpkg.com/@jspsych/plugin-html-button-response@1.1.3/index.js'),
-  loadScript('https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3/index.js'),
-])).then(() => {
-  boot();
-}).catch(err => {
-  document.body.innerHTML = '<div style="color:#f06a6a;padding:40px;font-family:monospace;">Failed to load jsPsych: ' + err + '</div>';
-});
+/* ── Social stimulus maps ── */
+var BASE = 'https://wilderhartwell.github.io/SocIntuitLrn/stim/';
+var SCEN_VIDEO = { '3':BASE+'angry_greete.mp4', '-2':BASE+'ground_greete.mp4', '1':BASE+'neutral_greete.mp4', '-3':BASE+'sad_greete.mp4', '0':BASE+'shake_greete.mp4', '-1':BASE+'smile_greete.mp4', '2':BASE+'wave_greete.mp4' };
+var RESP_IMG   = { 1:BASE+'fear_respf.png', 2:BASE+'disgust_respf.png', 3:BASE+'neutral_respf.png' };
+var RESP_LABEL = { 1:'Fear', 2:'Disgust', 3:'Neutral' };
+var KEY_MAP    = { 1:'F', 2:'J', 3:'L' };
+var KEY_TO_RESP = { 'f':1, 'j':2, 'l':3 };
+var OUT_IMG    = { '0':BASE+'happy_fbe.jpg', '1':BASE+'shock_fbe.jpg', '-1':BASE+'disappoint_fbe.jpg' };
 
-/* ════════════════════════════════════════════════════════════
-   EVERYTHING BELOW RUNS ONLY AFTER JSPSYCH IS LOADED
-   ════════════════════════════════════════════════════════════ */
-function boot() {
+/* ── Nonsocial stimulus maps ── */
+var BASE_N = 'https://wilderhartwell.github.io/SocIntuitLrn/stim/';
+var SCEN_VIDEO_N = { '3':BASE_N+'Diamond.mp4', '-2':BASE_N+'Hexagon.mp4', '1':BASE_N+'Octagon.mp4', '-3':BASE_N+'Rectangle.mp4', '0':BASE_N+'Square.mp4', '-1':BASE_N+'Trapezoid.mp4', '2':BASE_N+'Triangle.mp4' };
+var RESP_IMG_N   = { 1:BASE_N+'Yellow.jpg', 2:BASE_N+'Red.jpg', 3:BASE_N+'Blue.jpg' };
+var RESP_LABEL_N = { 1:'Yellow', 2:'Red', 3:'Blue' };
+var KEY_MAP_N    = { 1:'F', 2:'J', 3:'L' };
+var KEY_TO_RESP_N = { 'f':1, 'j':2, 'l':3 };
+var OUT_IMG_N    = { '0':BASE_N+'Polygon_a.jpg', '1':BASE_N+'Polygon_b.jpg', '-1':BASE_N+'Polygon_c.jpg' };
 
-/* ── Stimulus maps ── */
-const BASE = 'https://raw.githubusercontent.com/WilderHartwell/SocIntuitLrn/main/stim/';
-
-const SCEN_VIDEO = {
-   3: BASE + 'angry_greete.mp4',
-  '-2': BASE + 'ground_greete.mp4',
-   1: BASE + 'neutral_greete.mp4',
-  '-3': BASE + 'sad_greete.mp4',
-   0: BASE + 'shake_greete.mp4',
-  '-1': BASE + 'smile_greete.mp4',
-   2: BASE + 'wave_greete.mp4',
-};
-const RESP_IMG   = { 1: BASE + 'fear_respe.jpg', 2: BASE + 'disgust_respe.jpg', 3: BASE + 'neutral_respe.jpg' };
-const RESP_LABEL = { 1: 'Fear', 2: 'Disgust', 3: 'Neutral' };
-const KEY_MAP    = { 1: 'F', 2: 'J', 3: 'L' };
-const KEY_TO_RESP = { f: 1, j: 2, l: 3 };
-const OUT_IMG    = { 0: BASE + 'smile_fbe.jpg', 1: BASE + 'shock_fbe.jpg', '-1': BASE + 'disappoint_fbe.jpg' };
-
-/* ── Rounding ── */
+/* ── Math helpers ── */
 function roundAwayFromZero(x) {
   if (Math.abs(x) < 0.5) return 0;
   return x > 0 ? Math.ceil(x) : Math.floor(x);
 }
-
-/* ── Circular move ── */
 function circularMove(arr, idx, delta) {
-  const n = arr.length;
-  const steps = roundAwayFromZero(delta);
+  var n = arr.length;
+  var steps = roundAwayFromZero(delta);
   return ((idx + steps) % n + n) % n;
 }
 
-/* ── Variable definitions ── */
-const OUT_VALS  = [-1, 0, 1];
-const SCEN_VALS = [-3, -2, -1, 0, 1, 2, 3];
-const RESP_VALS = [1, 2, 3];
+/* ── State ── */
+var OUT_VALS  = [-1, 0, 1];
+var SCEN_VALS = [-3, -2, -1, 0, 1, 2, 3];
+var RESP_VALS = [1, 2, 3];
+var outIdx = 1, scenIdx = 3;   // both start at 0
+var trialLog = [];
+var pendingRand;
 
-let outIdx  = 1;  // start value: 0
-let scenIdx = 3;  // start value: 0
-const NUM_TRIALS = 50;
-const trialLog = [];
-
-/* ── SVG dial ── */
-function makeDial(vals, activeIdx, color, size = 90) {
-  const cx = size / 2, cy = size / 2, r = size * 0.36, n = vals.length;
-  let p = [`<svg class="dial" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`];
-  p.push(`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#2a2d3e" stroke-width="1.2"/>`);
-  for (let i = 0; i < n; i++) {
-    const a = (2 * Math.PI * i / n) - Math.PI / 2;
-    const x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
-    const on = i === activeIdx;
-    if (on) {
-      p.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="11" fill="${color}" opacity="0.18"/>`);
-      p.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="11" fill="none" stroke="${color}" stroke-width="1.8"/>`);
-    }
-    const fs = vals[i].toString().length > 2 ? 7 : 9;
-    p.push(`<text x="${x.toFixed(1)}" y="${(y+0.35*fs).toFixed(1)}" text-anchor="middle" font-size="${fs}" font-weight="${on?700:400}" fill="${on?color:'#6b6e87'}">${vals[i]}</text>`);
-  }
-  p.push(`<circle cx="${cx}" cy="${cy}" r="2" fill="#2a2d3e"/></svg>`);
-  return p.join('');
-}
-
-/* ── Build trial stimulus ── */
-let pendingRand;
-
+/* ── Social Stimuli Trial HTML ── */
 function buildTrialHTML(trialNum) {
-  const outVal  = OUT_VALS[outIdx];
-  const scenVal = SCEN_VALS[scenIdx];
-  pendingRand   = parseFloat((1.1 + Math.random() * 0.8).toFixed(3));
 
-  const prevInfo = trialLog.length > 0 ? (() => {
-    const p = trialLog[trialLog.length - 1];
-    const dOut = p.newOut - p.outBefore, dScen = p.newScen - p.scenBefore;
-    return `<div class="prev-strip">
-      Previous: &Delta;out <span style="color:${dOut>0?'var(--pos)':dOut<0?'var(--neg)':'var(--muted)'}">${dOut>=0?'+':''}${dOut}</span>
-      &nbsp;|&nbsp; &Delta;scen <span style="color:${dScen>0?'var(--pos)':dScen<0?'var(--neg)':'var(--muted)'}">${dScen>=0?'+':''}${dScen}</span>
-    </div>`;
-  })() : '';
+  var outVal  = OUT_VALS[outIdx];
+  var scenVal = SCEN_VALS[scenIdx];
 
-  const dialOut  = makeDial(OUT_VALS,  outIdx,  '#4ecdc4');
-  const dialScen = makeDial(SCEN_VALS, scenIdx, '#7c6af7', 110);
-  const dialResp = makeDial(RESP_VALS, -1,      '#f7c948');
+    // Use blob URL if available, fall back to original URL
+  var scenStim = videoBlobURLs[String(scenVal)] || SCEN_VIDEO[String(scenVal)];
 
-  const respCards = RESP_VALS.map(rv =>
-    `<div class="resp-card" id="resp-card-${rv}">
-      <img src="${RESP_IMG[rv]}" alt="${RESP_LABEL[rv]}">
-      <span class="resp-key">${KEY_MAP[rv]}</span>
-      <span class="resp-card-label">${RESP_LABEL[rv]}</span>
-    </div>`
-  ).join('');
+  pendingRand = parseFloat((1.1 + Math.random()*0.8).toFixed(3));
 
   return `
-  <div class="trial-wrap">
-    <div class="trial-num">Trial <span>${trialNum}</span> / ${NUM_TRIALS}</div>
-    ${prevInfo}
-    <div class="stim-row">
-      <div class="stim-col">
-        <div class="stim-col-label">Current Outcome (out)</div>
-        <img class="out-img" src="${OUT_IMG[outVal]}" alt="out=${outVal}">
-        <div class="out-val-badge">${outVal >= 0 ? '+' : ''}${outVal}</div>
-        ${dialOut}
-      </div>
-      <div class="stim-col">
-        <div class="stim-col-label">Scenario (scen)</div>
-        <video class="scen-video" src="${SCEN_VIDEO[scenVal]}" autoplay muted loop playsinline></video>
-        <div class="scen-val-badge">${scenVal >= 0 ? '+' : ''}${scenVal}</div>
-        ${dialScen}
-      </div>
-      <div class="stim-col">
-        <div class="stim-col-label">Resp dial</div>
-        ${dialResp}
-        <div class="info-chip" style="margin-top:4px;">
-          <span class="lbl">rand</span><span class="val">${pendingRand}</span>
-        </div>
-      </div>
+  <div style="
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:space-between;
+    height:90vh;
+    width:100%;
+  ">
+
+    <!-- VIDEO -->
+
+    <div style="
+      flex:2;
+      display:flex;
+      justify-content:center;
+      width:100%;
+    ">
+      <video
+        autoplay
+        muted
+        playsinline
+        preload="auto"
+        style="width:auto;
+        height:600px;"
+        src="${scenStim}" type="video/mp4"
+      >
+      </video>
     </div>
-    <div class="eq-panel">
-      <div class="eq-row">
-        <span class="eq-label">Eq A &rarr;</span>
-        <span class="eq-expr">rand &times; 0.33 &times; (scen + (scen &minus; resp)) &nbsp;&rarr; &Delta;out</span>
-      </div>
-      <div class="eq-row">
-        <span class="eq-label">Eq B &rarr;</span>
-        <span class="eq-expr">rand &times; 0.33 &times; (out + (scen &minus; resp)) &nbsp;&rarr; &Delta;scen</span>
-      </div>
+
+    <!-- divider -->
+
+    <div 
+      id="divider-test"
+      style="
+        width:100%;
+        height:3px;
+        background:#444;
+        flex-shrink:0;
+        margin-top:10px;
+    ">
     </div>
-    <div class="resp-section">
-      <div class="resp-section-label">
-        Press <b style="color:var(--accent3);font-family:var(--font-mono)">F</b> &middot;
-              <b style="color:var(--accent3);font-family:var(--font-mono)">J</b> &middot;
-              <b style="color:var(--accent3);font-family:var(--font-mono)">L</b> to respond
+
+    <!-- response images -->
+
+    <div style="
+      flex:1;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      gap:60px;
+      width:100%;
+    ">
+
+      <div id="resp-card-1">
+        <img src="${RESP_IMG[1]}" style="width:140px;">
+        <p><b>F</b></p>
       </div>
-      <div class="resp-btns">${respCards}</div>
+
+      <div id="resp-card-2">
+        <img src="${RESP_IMG[2]}" style="width:140px;">
+        <p><b>J</b></p>
+      </div>
+
+      <div id="resp-card-3">
+        <img src="${RESP_IMG[3]}" style="width:140px;">
+        <p><b>L</b></p>
+      </div>
+
     </div>
+
+  </div>
+  `;
+}
+
+function buildTrialOut(trialNum) {
+
+  var outVal  = OUT_VALS[outIdx];
+  var scenVal = SCEN_VALS[scenIdx];
+
+  var outStim = OUT_IMG[String(outVal)];
+  console.log(outStim);
+
+  return `
+  <div style="
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:space-between;
+    height:90vh;
+    width:100%;
+  ">
+  <div style="
+      flex:1;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      width:100%;
+    ">
+
+      <div id="out_img">
+        <img src="${outStim}" style="width:500px;">
+      </div>
   </div>`;
 }
 
-/* ── jsPsych init ── */
-const jsPsych = initJsPsych({
-  display_element: 'jspsych-target',
-  on_finish: showResults
-});
+/* ── Nonsocial Stimuli Trial HTML ── */
+function buildTrialHTML_N(trialNum) {
 
-const timeline = [];
+  var outVal  = OUT_VALS[outIdx];
+  var scenVal = SCEN_VALS[scenIdx];
 
-/* Intro */
-timeline.push({
-  type: jsPsychHtmlButtonResponse,
-  stimulus: `
-    <div style="max-width:520px;margin:0 auto;padding:40px 20px;text-align:center;">
-      <div style="font-size:28px;font-weight:800;margin-bottom:10px;">Circular Equation Sim</div>
-      <div style="color:var(--muted);font-size:14px;line-height:1.8;margin-bottom:24px;">
-        50 trials &middot; circular equations &middot; social stimuli<br>
-        Each trial: watch the scenario video, then press
-        <b style="font-family:monospace">F</b>,
-        <b style="font-family:monospace">J</b>, or
-        <b style="font-family:monospace">L</b> to choose a response.<br>
-        Your choice drives how <code style="background:var(--panel);padding:1px 6px;border-radius:4px;">out</code>
-        and <code style="background:var(--panel);padding:1px 6px;border-radius:4px;">scen</code> evolve.
+    // Use blob URL if available, fall back to original URL
+  var scenStim_N = videoBlobURLs_N[String(scenVal)] || SCEN_VIDEO_N[String(scenVal)];
+
+  pendingRand = parseFloat((1.1 + Math.random()*0.8).toFixed(3));
+
+  return `
+  <div style="
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:space-between;
+    height:90vh;
+    width:100%;
+  ">
+
+    <!-- VIDEO -->
+
+    <div style="
+      flex:2;
+      display:flex;
+      justify-content:center;
+      width:100%;
+    ">
+      <video
+        autoplay
+        muted
+        playsinline
+        preload="auto"
+        style="width:auto; height:600px;"
+        src="${scenStim_N}"
+        >
+      </video>
+    </div>
+
+    <!-- divider -->
+
+    <div 
+      id="divider-test"
+      style="
+        width:100%;
+        height:3px;
+        background:#444;
+        flex-shrink:0;
+        margin-top:10px;
+    ">
+    </div>
+
+    <!-- response images -->
+
+    <div style="
+      flex:1;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      gap:60px;
+      width:100%;
+    ">
+
+      <div id="resp-card-1">
+        <img src="${RESP_IMG_N[1]}" style="width:160px;">
+        <p><b>F</b></p>
       </div>
-      <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 18px;text-align:left;font-family:var(--font-mono);font-size:12px;margin-bottom:24px;">
-        <div style="color:var(--muted);margin-bottom:6px;">EQUATIONS</div>
-        <div>&Delta;out  = round( rand &times; 0.33 &times; (scen + (scen &minus; resp)) )</div>
-        <div>&Delta;scen = round( rand &times; 0.33 &times; (out  + (scen &minus; resp)) )</div>
-        <div style="color:var(--muted);margin-top:8px;">rand &isin; [1.1, 1.9] &middot; same each trial &middot; |x|&lt;0.5&rarr;0, |x|&ge;0.5&rarr;away from zero</div>
+
+      <div id="resp-card-2">
+        <img src="${RESP_IMG_N[2]}" style="width:160px;">
+        <p><b>J</b></p>
       </div>
-      <table style="width:100%;font-family:var(--font-mono);font-size:13px;border-collapse:collapse;">
-        <tr>
-          <th style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.1em;padding:6px 12px;border-bottom:1px solid var(--border);">Key</th>
-          <th style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.1em;padding:6px 12px;border-bottom:1px solid var(--border);">Response</th>
-          <th style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.1em;padding:6px 12px;border-bottom:1px solid var(--border);">Value</th>
-        </tr>
-        <tr><td style="padding:6px 12px;color:var(--accent3);font-weight:700;">F</td><td style="padding:6px 12px;">Fear</td><td style="padding:6px 12px;color:var(--accent);">1</td></tr>
-        <tr><td style="padding:6px 12px;color:var(--accent3);font-weight:700;">J</td><td style="padding:6px 12px;">Disgust</td><td style="padding:6px 12px;color:var(--accent);">2</td></tr>
-        <tr><td style="padding:6px 12px;color:var(--accent3);font-weight:700;">L</td><td style="padding:6px 12px;">Neutral</td><td style="padding:6px 12px;color:var(--accent);">3</td></tr>
-      </table>
-    </div>`,
-  choices: ['Start'],
-  button_html: '<button class="dl-btn" style="margin-top:20px;">%choice%</button>'
-});
 
-/* 50 trials */
-for (let t = 1; t <= NUM_TRIALS; t++) {
-  const trialNum = t;
-  timeline.push({
-    type: jsPsychHtmlButtonResponse,
-    stimulus: function() { return buildTrialHTML(trialNum); },
-    choices: [],
-    on_load: function() {
-      const rand    = pendingRand;
-      const outVal  = OUT_VALS[outIdx];
-      const scenVal = SCEN_VALS[scenIdx];
-      let responded = false;
+      <div id="resp-card-3">
+        <img src="${RESP_IMG_N[3]}" style="width:160px;">
+        <p><b>L</b></p>
+      </div>
 
-      function handleKey(e) {
-        if (responded) return;
-        const key = e.key.toLowerCase();
-        if (!(key in KEY_TO_RESP)) return;
-        responded = true;
-        document.removeEventListener('keydown', handleKey);
+    </div>
 
-        const resp = KEY_TO_RESP[key];
-        const card = document.getElementById('resp-card-' + resp);
-        if (card) card.classList.add('active');
+  </div>
+  `;
+}
 
-        const eqA = rand * 0.33 * (scenVal + (scenVal - resp));
-        const eqB = rand * 0.33 * (outVal  + (scenVal - resp));
+function buildTrialOut_N(trialNum) {
 
-        const newOutIdx  = circularMove(OUT_VALS,  outIdx,  eqA);
-        const newScenIdx = circularMove(SCEN_VALS, scenIdx, eqB);
+  var outVal  = OUT_VALS[outIdx];
+  var scenVal = SCEN_VALS[scenIdx];
 
-        trialLog.push({
-          trial: trialNum,
-          outBefore: outVal, scenBefore: scenVal,
-          resp, key: key.toUpperCase(), rand,
-          eqA: parseFloat(eqA.toFixed(4)),
-          eqB: parseFloat(eqB.toFixed(4)),
-          deltaOut:  roundAwayFromZero(eqA),
-          deltaScen: roundAwayFromZero(eqB),
-          newOut:  OUT_VALS[newOutIdx],
-          newScen: SCEN_VALS[newScenIdx],
-          scenStim: SCEN_VIDEO[scenVal].split('/').pop(),
-          respStim: RESP_IMG[resp].split('/').pop(),
-          outStim:  OUT_IMG[outVal].split('/').pop(),
-        });
+  var outStim_N = OUT_IMG_N[String(outVal)];
+  console.log(outStim_N);
 
-        outIdx  = newOutIdx;
-        scenIdx = newScenIdx;
+  return `
+  <div style="
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:space-between;
+    height:90vh;
+    width:100%;
+  ">
+  <div style="
+      flex:1;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      width:100%;
+    ">
 
-        setTimeout(() => jsPsych.finishTrial({ resp, key: key.toUpperCase(), eqA, eqB }), 150);
-      }
-
-      document.addEventListener('keydown', handleKey);
-    },
-    on_finish: function() {}
-  });
+      <div id="out_img">
+        <img src="${outStim_N}" style="width:500px;">
+      </div>
+  </div>`;
 }
 
 /* ── Results ── */
 function showResults() {
-  const RESP_LABEL_LOCAL = { 1: 'Fear', 2: 'Disgust', 3: 'Neutral' };
+  function cls(v){ return v>0?'pos-cell':v<0?'neg-cell':'zero-cell'; }
+  function sgn(v){ return (v>=0?'+':'')+v; }
 
-  const rows = trialLog.map(r => `
-    <tr>
-      <td>${r.trial}</td>
-      <td class="${r.outBefore>0?'pos-cell':r.outBefore<0?'neg-cell':'zero-cell'}">${r.outBefore>=0?'+':''}${r.outBefore}</td>
-      <td class="sc-cell">${r.scenBefore>=0?'+':''}${r.scenBefore}</td>
-      <td class="acc-cell">${r.resp} (${RESP_LABEL_LOCAL[r.resp]})</td>
-      <td style="color:var(--accent3);font-family:var(--font-mono)">${r.key}</td>
-      <td style="color:var(--accent3)">${r.rand}</td>
-      <td class="${r.eqA>0?'pos-cell':r.eqA<0?'neg-cell':'zero-cell'}">${r.eqA>=0?'+':''}${r.eqA}</td>
-      <td class="${r.eqB>0?'pos-cell':r.eqB<0?'neg-cell':'zero-cell'}">${r.eqB>=0?'+':''}${r.eqB}</td>
-      <td class="${r.deltaOut>0?'pos-cell':r.deltaOut<0?'neg-cell':'zero-cell'}">${r.deltaOut>=0?'+':''}${r.deltaOut}</td>
-      <td class="${r.deltaScen>0?'pos-cell':r.deltaScen<0?'neg-cell':'zero-cell'}">${r.deltaScen>=0?'+':''}${r.deltaScen}</td>
-      <td class="${r.newOut>0?'pos-cell':r.newOut<0?'neg-cell':'zero-cell'}">${r.newOut>=0?'+':''}${r.newOut}</td>
-      <td class="sc-cell">${r.newScen>=0?'+':''}${r.newScen}</td>
-      <td style="color:var(--muted);font-size:10px;">${r.scenStim}</td>
-      <td style="color:var(--muted);font-size:10px;">${r.respStim}</td>
-      <td style="color:var(--muted);font-size:10px;">${r.outStim}</td>
-    </tr>`).join('');
+  var rows = trialLog.map(function(r) {
+    return '<tr>'+
+      '<td>'+r.trial+'</td>'+
+      '<td class="'+cls(r.outBefore)+'">'+sgn(r.outBefore)+'</td>'+
+      '<td class="sc-cell">'+sgn(r.scenBefore)+'</td>'+
+      '<td class="acc-cell">'+r.resp+' ('+RESP_LABEL[r.resp]+')</td>'+
+      '<td style="color:var(--accent3)">'+r.key+'</td>'+
+      '<td style="color:var(--muted)">'+Math.round(r.rt)+'</td>'+
+      '<td style="color:var(--accent3)">'+r.rand+'</td>'+
+      '<td class="'+cls(r.eqA)+'">'+sgn(r.eqA)+'</td>'+
+      '<td class="'+cls(r.eqB)+'">'+sgn(r.eqB)+'</td>'+
+      '<td class="'+cls(r.deltaOut)+'">'+sgn(r.deltaOut)+'</td>'+
+      '<td class="'+cls(r.deltaScen)+'">'+sgn(r.deltaScen)+'</td>'+
+      '<td class="'+cls(r.newOut)+'">'+sgn(r.newOut)+'</td>'+
+      '<td class="sc-cell">'+sgn(r.newScen)+'</td>'+
+      '<td style="color:var(--muted);font-size:10px">'+r.scenStim+'</td>'+
+      '<td style="color:var(--muted);font-size:10px">'+r.respStim+'</td>'+
+      '<td style="color:var(--muted);font-size:10px">'+r.outStim+'</td>'+
+    '</tr>';
+  }).join('');
 
-  const csv = [
-    'trial,outBefore,scenBefore,resp,respLabel,key,rand,eqA,eqB,deltaOut,deltaScen,newOut,newScen,scenStim,respStim,outStim',
-    ...trialLog.map(r =>
-      `${r.trial},${r.outBefore},${r.scenBefore},${r.resp},${RESP_LABEL_LOCAL[r.resp]},${r.key},${r.rand},${r.eqA},${r.eqB},${r.deltaOut},${r.deltaScen},${r.newOut},${r.newScen},${r.scenStim},${r.respStim},${r.outStim}`)
-  ].join('\n');
+  var csv = ['trial,outBefore,scenBefore,resp,respLabel,key,rt,rand,eqA,eqB,deltaOut,deltaScen,newOut,newScen,scenStim,respStim,outStim'].concat(
+    trialLog.map(function(r){ return [r.trial,r.outBefore,r.scenBefore,r.resp,RESP_LABEL[r.resp],r.key,r.rt,r.rand,r.eqA,r.eqB,r.deltaOut,r.deltaScen,r.newOut,r.newScen,r.scenStim,r.respStim,r.outStim].join(','); })
+  ).join('\n');
   window._simCSV = csv;
 
-  document.getElementById('jspsych-target').innerHTML = `
-    <div class="results-wrap">
-      <div class="results-title">Simulation Complete</div>
-      <div class="results-sub">50 trials &middot; final state: out = ${OUT_VALS[outIdx]>=0?'+':''}${OUT_VALS[outIdx]}, scen = ${SCEN_VALS[scenIdx]>=0?'+':''}${SCEN_VALS[scenIdx]}</div>
-      <button class="dl-btn" onclick="downloadCSV()">&#11015; Download CSV</button>
-      <div style="overflow-x:auto;margin-top:18px;">
-        <table class="log">
-          <thead><tr>
-            <th>#</th>
-            <th>out</th><th>scen</th><th>resp</th><th>key</th><th>rand</th>
-            <th>Eq A</th><th>Eq B</th>
-            <th>&Delta;out</th><th>&Delta;scen</th>
-            <th>out'</th><th>scen'</th>
-            <th>scen stim</th><th>resp stim</th><th>out stim</th>
-          </tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
-    </div>`;
+  document.querySelector('.jspsych-display-element').innerHTML =
+    '<div class="results-wrap">'+
+    '<div class="results-title">Simulation Complete</div>'+
+    '<div class="results-sub">50 trials &middot; final state: out = '+sgn(OUT_VALS[outIdx])+', scen = '+sgn(SCEN_VALS[scenIdx])+'</div>'+
+    '<button class="dl-btn" onclick="downloadCSV()">&#11015; Download CSV</button>'+
+    '<div style="overflow-x:auto;margin-top:18px;">'+
+    '<table class="log"><thead><tr>'+
+    '<th>#</th><th>out</th><th>scen</th><th>resp</th><th>key</th><th>rt(ms)</th><th>rand</th>'+
+    '<th>Eq A</th><th>Eq B</th><th>&Delta;out</th><th>&Delta;scen</th>'+
+    '<th>out\'</th><th>scen\'</th><th>scen stim</th><th>resp stim</th><th>out stim</th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
 }
 
 window.downloadCSV = function() {
-  const blob = new Blob([window._simCSV], { type: 'text/csv' });
-  const a = document.createElement('a');
+  var blob = new Blob([window._simCSV], {type:'text/csv'});
+  var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'simulation_results.csv';
   a.click();
 };
 
+/* ── jsPsych init ── */
+var jsPsych = initJsPsych({ 
+  on_finish: () => {
+    jsPsych.data.get().localSave('csv', 'test_data.csv');
+    }
+   });
+
+// Preload images and videos
+
+// Combine all images from both social and nonsocial sets
+var allImages = Array.from(new Set(
+  Object.values(RESP_IMG)
+    .concat(Object.values(OUT_IMG))
+    .concat(Object.values(RESP_IMG_N))
+    .concat(Object.values(OUT_IMG_N))
+));
+
+var videoBlobURLs = {};
+var videoBlobURLs_N = {};
+
+var preload = {
+  type: jsPsychPreload,
+  images: allImages,
+  video: [],
+  on_start: function() {
+    // Fetch social videos
+    var socialFetches = Object.entries(SCEN_VIDEO).map(function([key, url]) {
+      return fetch(url)
+        .then(function(r) { return r.blob(); })
+        .then(function(blob) {
+          videoBlobURLs[key] = URL.createObjectURL(blob);
+          console.log('Social blob ready for scen', key);
+        })
+        .catch(function(err) {
+          console.warn('Social blob fetch failed for scen', key, err);
+        });
+    });
+
+    // Fetch nonsocial videos
+    var nonsocialFetches = Object.entries(SCEN_VIDEO_N).map(function([key, url]) {
+      return fetch(url)
+        .then(function(r) { return r.blob(); })
+        .then(function(blob) {
+          videoBlobURLs_N[key] = URL.createObjectURL(blob);
+          console.log('Nonsocial blob ready for scen', key);
+        })
+        .catch(function(err) {
+          console.warn('Nonsocial blob fetch failed for scen', key, err);
+        });
+    });
+
+    return Promise.all(socialFetches.concat(nonsocialFetches));
+  },
+  on_success: function(file) {
+    console.log('Image preloaded:', file);
+  },
+  on_error: function(file) {
+    console.warn('Image preload FAILED:', file);
+  },
+  on_finish: function(data) {
+    console.log('Preload trial finished:', data);
+    console.log('Social blob URLs ready:', Object.keys(videoBlobURLs));
+    console.log('Nonsocial blob URLs ready:', Object.keys(videoBlobURLs_N));
+  }
+};
+
+var timeline = []; // create timeline
+//timeline.push({ type: jsPsychPreload, images: allImages, video: allVideos });
+timeline.push(preload);
+
+var consent = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus:`
+              <div style="
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    ">
+      <div style="
+        max-width: 800px;
+        margin: 0 auto;
+        text-align: left;
+      ">
+              <h3>Exempt Information Sheet</h3>
+              <p>You are being invited to participate in a research study titled Social Learning. This study is being done by Leslie Carver and Wilder Hartwell from UC San Diego. You were selected to participate in this study because you are an adult with or without autism spectrum disorder.</p>
+              <p>The purpose of this research study is to obtain greater knowledge about social and nonsocial learning. Your participation in this research should last approximately 30 - 60 minutes. If you agree to take part in this study, you will be asked to complete a task on the computer that will take approximately 30 - 60 minutes. The task will involve responding to cues to get a desire outcome.</p>
+              <p>Your participation in this study is completely voluntary and you can withdraw at any time. Choosing not to participate or withdrawing will result in no penalty or loss of benefits to which you are entitled. You are free to skip any question that you choose.</p>
+              <p>If you have questions about this project or if you have a research-related problem, you may contact the researcher, Leslie Carver, 858-757-4513. If you have any questions concerning your rights as a research subject, you may contact the UC San Diego Office of IRB Administration at irb@ucsd.edu or 858-246-4777.</p>
+              <p>By participating in this research you are indicating that you are at least 18 years old, have read this consent form, and agree to participate in this research study. Please keep this consent form for your records.</p>
+              <p>If you agree to participate, press the enter key to continue. If you no longer want to participate, please close the webpage.</p>
+              </div>
+            </div>`,
+ post_trial_gap: 1000,
+ choices: ['Enter']
+};
+
+
+var welcome = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `<div style="
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      max-width: 1000px;
+      margin: 0 auto;
+    ">
+               <h2>Welcome to the experiment</h2>
+               <p>Press the enter key to begin.</p>
+               </div>`,
+    post_trial_gap: 1000,
+    choices: ['Enter']
+
+};
+
+// Demographic questions 
+var demographics = {
+    type: jsPsychSurveyMultiChoice,
+    preamble: `<p><h3>Please answer the following demographic questions. Your answers will not affect your ability to participate.</h3></p>`,
+    questions: [
+      {
+        prompt: "What is your age?",
+        name: "age",
+        options: ["18-24", "25-34", "35-44", "45-54", "55-64", "65+", "Prefer not to say"],
+        required: true
+      },
+      {
+        prompt: "What is your gender?",
+        name: "gender",
+        options: ["Man", "Woman", "Genderqueer", "Prefer not to say"],
+        required: true
+      },
+      {
+        prompt: "What is your race?",
+        name: "race",
+        options: ["White", "Black or African American", "Asian", "Hispanic or Latino", "Native American or Alaska Native", "Native Hawaiian or Other Pacific Islander", "Mixed Race", "Other", "Prefer not to say"],
+        required: true
+      },
+      {
+        prompt: "Do you have an official autism spectrum disorder diagnosis from a licensed clincian (psychiatrist, psychologist, or neuropsychologist)?",
+        name: "autism",
+        options: ["Yes", "No", "Prefer not to say"],
+        required: true
+      }
+    ]}
+
+
+var SRS = {
+  type: jsPsychSurveyMultiChoice,
+  preamble: `<p>Last step before you begin the experimental task! Please answer this short survey:</p> <p><b> How true is the following statement for you?</b></p>`,
+  questions: [  
+    { name: 'SRS1', prompt: "When under stress, I engage in rigid or inflexible patterns of behavior that seem odd to people.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true },
+    { name: 'SRS2', prompt: "I am usually aware of how others are feeling.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS3', prompt: "I behave in ways that seem strange or bizarre to others.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS4', prompt: "I am awkward in turn-taking interactions with others (for example, I have a hard time keeping up with the give-and-take of a conversation).", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS5', prompt: "I avoid eye contact or am told that I have unusal eye contact.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS6', prompt: "I have sensory interests that others find unusual (for example, smelling or looking at things in a special way).", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS7', prompt: "I interact appropriately with other adults.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS8', prompt: "I do not join group activities or social events unless prompted or strongly urged to do so.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS9', prompt: "I am regarded by others as odd or weird.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS10', prompt: "I become upset in situations with lots of things going on.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS11', prompt: "My behavior is socially awkward, even when I am trying to be polite.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS12', prompt: "I have difficulty relating to adults outside of my family.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS13', prompt: "I respond appropriately to mood changes in others (for example, when a friend's mood changes from happy to sad).", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS14', prompt: "People think I am interested in too few topics, or that I get too carried away with those topics.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS15', prompt: "I am overly sensitive to certain sounds, textures, or smells.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS16', prompt: "I tend to think about people in the same way that I do objects.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  }
+  ],
+  }
+
+
+var social_instructions = {
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: `
+    <div style="
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      max-width: 1000px;
+      margin: 0 auto;
+    ">
+      <p><b>Instructions</b></p>
+      <p style="margin-left: 10px; margin-right: 10px;">In this task you will see a person approaching you at the top of the screen. 
+        At the bottom, you will see your possible reactions. Your task is to react to the person approaching you in a way that will get them 
+        to <b>smile</b> at you as is <b>shown below.</b> </p>
+        <p><img src="${OUT_IMG[0]}" style="width:200px;"></p>
+        <p> You only have until the end of the approach to respond. You will see the person's feedback after you respond. 
+        Importantly, the person is from a different culture where their response to you may not align with what you would expect in your real life. 
+        You will get a break halfway through the task.</p>
+        
+      <p>Press <b>enter</b> to begin.</p>
+    </div>`,
+  post_trial_gap: 2000,
+  choices: ['Enter']
+};
+
+var nonsocial_instructions = {
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: `
+    <div style="
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      max-width: 1000px;
+      margin: 0 auto;
+    ">
+      <p><b>Instructions</b></p>
+      <p style="margin-left: 10px; margin-right: 10px;">In this task you will see a shape getting closer to you at the top of the screen. 
+        At the bottom, you will see three colors. Your task is to respond to the shape getting closer to you using one of the three colors
+        such that the next shape you see is the polygon <b>shown below.</b></p>
+        <p><img src="${OUT_IMG_N[0]}" style="width:200px;"></p>
+        <p>You only have until the shape nears you to respond. You will see the feedback polygon after you respond. You will get a break halfway through the task.</p>
+      <p>Press <b>enter</b> to begin.</p>
+    </div>`,
+  post_trial_gap: 2000,
+  choices: ['Enter']
+};
+
+let SocTrial = [];
+
+/* Run Social trials */
+SocTrial.push({
+    timeline: [
+    {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: function() {
+      return buildTrialHTML(
+        jsPsych.data.get().filter({task: 'response'}).count() + 1
+      );
+    },
+
+    choices: ['f','j','l'],
+    response_ends_trial: true,
+    trial_duration: 3000,
+    post_trial_gap: 250,
+
+    on_finish: function(data) {
+      var key = data.response;
+      var resp;
+      if (key === null) {
+    // No response made — select randomly from [1, 2, 3]
+    resp = Math.floor(Math.random() * 3) + 1;
+    data.response = null;       // keep null to mark it as a timeout
+    data.timed_out = true;
+  } else {
+    resp = KEY_TO_RESP[key];
+    data.timed_out = false;
+  }
+ // on_finish: function(data) {      var key = data.response;      if(key === null){        return;      }
+ //     var resp = KEY_TO_RESP[key];
+
+      var rand    = pendingRand;
+      var outVal  = OUT_VALS[outIdx];
+      var scenVal = SCEN_VALS[scenIdx];
+
+      var eqA = rand * 0.33 * (scenVal + (scenVal - resp));
+      var eqB = rand * 0.33 * (outVal  + (scenVal - resp));
+
+      var newOutIdx  = circularMove(OUT_VALS, outIdx, eqA);
+      var newScenIdx = circularMove(SCEN_VALS, scenIdx, eqB);
+
+      outIdx  = newOutIdx;
+      scenIdx = newScenIdx;
+
+      data.resp       = resp;
+      data.correct = (OUT_VALS[newOutIdx] === 0) ? 1 : 0;
+      data.rand       = rand;
+      data.currentOut = outVal;
+      data.currentScen = scenVal;
+      data.eqA        = parseFloat(eqA.toFixed(4));
+      data.eqB        = parseFloat(eqB.toFixed(4));
+      data.deltaOut   = roundAwayFromZero(eqA);
+      data.deltaScen  = roundAwayFromZero(eqB);
+      data.nextOut     = OUT_VALS[newOutIdx];
+      data.nextScen    = SCEN_VALS[newScenIdx];
+      data.scenStim   = SCEN_VIDEO[String(scenVal)].split('/').pop();
+      data.respStim   = RESP_IMG[resp].split('/').pop();
+      data.outStim    = OUT_IMG[String(outVal)].split('/').pop();
+      data.trialNum   = jsPsych.data.get().filter({task: 'response'}).count(); // No +1 here because by the time on_finish runs, the current trial is already counted
+    },
+
+    data: {
+      task: 'response'
+    }
+    },
+    {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: function() {
+      return buildTrialOut(
+        jsPsych.data.get().filter({task: 'outcome'}).count() + 1
+      );
+    },
+    trial_duration: 1500,
+    post_trial_gap: 250,
+    choices: "NO_KEYS",
+    data: {
+      task: 'outcome'
+      }
+    },
+  ]
+})
+
+let NonsocTrial = [];
+
+/* Run Social trials */
+NonsocTrial.push({
+    timeline: [
+    {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: function() {
+      return buildTrialHTML_N(
+        jsPsych.data.get().filter({task: 'response_N'}).count() + 1
+      );
+    },
+
+    choices: ['f','j','l'],
+    response_ends_trial: true,
+    trial_duration: 3000,
+    post_trial_gap: 250,
+
+    on_finish: function(data) {
+      var key = data.response;
+      var resp;
+      if (key === null) {
+    // No response made — select randomly from [1, 2, 3]
+    resp = Math.floor(Math.random() * 3) + 1;
+    data.response = null;       // keep null to mark it as a timeout
+    data.timed_out = true;
+  } else {
+    resp = KEY_TO_RESP_N[key];
+    data.timed_out = false;
+  }
+ // on_finish: function(data) {      var key = data.response;      if(key === null){        return;      }
+ //     var resp = KEY_TO_RESP[key];
+
+      var rand    = pendingRand;
+      var outVal  = OUT_VALS[outIdx];
+      var scenVal = SCEN_VALS[scenIdx];
+
+      var eqA = rand * 0.33 * (scenVal + (scenVal - resp));
+      var eqB = rand * 0.33 * (outVal  + (scenVal - resp));
+
+      var newOutIdx  = circularMove(OUT_VALS, outIdx, eqA);
+      var newScenIdx = circularMove(SCEN_VALS, scenIdx, eqB);
+
+      outIdx  = newOutIdx;
+      scenIdx = newScenIdx;
+
+      data.resp       = resp;
+      data.correct = (OUT_VALS[newOutIdx] === 0) ? 1 : 0;
+      data.rand       = rand;
+      data.currentOut = outVal;
+      data.currentScen = scenVal;
+      data.eqA        = parseFloat(eqA.toFixed(4));
+      data.eqB        = parseFloat(eqB.toFixed(4));
+      data.deltaOut   = roundAwayFromZero(eqA);
+      data.deltaScen  = roundAwayFromZero(eqB);
+      data.nextOut     = OUT_VALS[newOutIdx];
+      data.nextScen    = SCEN_VALS[newScenIdx];
+      data.scenStim   = SCEN_VIDEO_N[String(scenVal)].split('/').pop();
+      data.respStim   = RESP_IMG_N[resp].split('/').pop();
+      data.outStim    = OUT_IMG_N[String(outVal)].split('/').pop();
+      data.trialNum   = jsPsych.data.get().filter({task: 'response_N'}).count(); // No +1 here because by the time on_finish runs, the current trial is already counted
+    },
+
+    data: {
+      task: 'response_N'
+    }
+    },
+    {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: function() {
+      return buildTrialOut_N(
+        jsPsych.data.get().filter({task: 'outcome_N'}).count() + 1
+      );
+    },
+    trial_duration: 1500,
+    post_trial_gap: 250,
+    choices: "NO_KEYS",
+    data: {
+      task: 'outcome_N'
+      }
+    },
+  ]
+})
+
+var ShortBreakTrial = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `<div style="
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      max-width: 1000px;
+      margin: 0 auto;
+      ">
+      <p>Good job! You can take a short break now.</p>
+      <p>Press <b>enter</b> when you're ready to continue.
+        </div>`,
+    post_trial_gap: 1000,
+    choices: ['Enter']
+};
+
+var LongBreakTrial = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `<div style="
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      max-width: 1000px;
+      margin: 0 auto;
+      ">
+      <p>Good job! You have completed half of the experiment! Now you're going to do a different task.</p>
+      <p>You can take a break now.</p>
+      <p>Press <b>enter</b> when you're ready to continue.
+      </div>`,
+    post_trial_gap: 1000,
+    choices: ['Enter']
+};
+
+function postTestOnLoad() {
+  var content = document.querySelector('.jspsych-content');
+  if (content) {
+    content.style.maxWidth = '800px';
+    content.style.margin = '0 auto';
+    content.style.padding = '0 40px';
+  }
+}
+
+var MechPostTest = {
+    type: jsPsychSurveyMultiChoice,
+    on_load: postTestOnLoad,
+    preamble: `<p><b>Now we're going to ask you a couple questions about how the experiment that shows <b>people</b> works. Please answer to the best of your ability based on your observations during the experiment. It's ok if you're not confident.</b></p>`,
+    questions: [
+      {
+        prompt: "What determines the feedback you get on each trial?",
+        name: "Mech",
+        options: ["It's random", "Only the way the person approaches", "Only my reaction", "Both the reaction and the approach"],
+        required: true
+      },
+      {
+        prompt: "How confident are you about your answer?",
+        name: "ConfidenceMech",
+        options:["0%", "25%", "50%", "75%", "100%"]
+      }
+    ]}
+
+var socImpPostTest = {
+  type: jsPsychSurveyMultiChoice,
+  on_load: postTestOnLoad,
+  preamble:`<p>Now we're going to tell you how the experiment with people works. In this task, each scenario, reaction, and feedback option has a value. 
+    The reaction values contribute to the scenario values to determine your feedback. Each of the three reaction values is a number between 1-3. Below, 
+    you will indicate what value (1-3) you believe is assigned to each reaction. You will also indicate your confidence level about each answer.</p>`, 
+  questions: [
+    {
+      prompt: `<p>What <b>value</b> is assigned to the <b>neutral</b> reaction?</p>
+      <p><img src="${RESP_IMG[3]}" style="width:140px;"></p>`,
+      name: "socImp_1",
+      options: ["1", "2", "3"],
+      required: true
+    },
+    {
+      prompt: `<p>How <b>confident</b> are you about your answer for the <b>neutral</b> reaction?</p>`,
+      name: "socConfidenceImp_1",
+      options: ["0%", "25%", "50%", "75%", "100%"],
+      required: true
+    },
+    {
+      prompt: `<p>What <b>value</b> is assigned to the <b>fearful</b> reaction?</p>
+      <p><img src="${RESP_IMG[1]}" style="width:140px;"></p>`,
+      name: "socImp_2",
+      options: ["1", "2", "3"],
+      required: true
+    },
+    {
+      prompt: `<p>How <b>confident</b> are you about your answer for the <b>fearful</b> reaction?</p>`,
+      name: "socConfidenceImp_2",
+      options: ["0%", "25%", "50%", "75%", "100%"],
+      required: true
+    },
+    {
+      prompt: `<p>What <b>value</b> is assigned to the <b>disgusted</b> reaction?</p>
+      <p><img src="${RESP_IMG[2]}" style="width:140px;"></p>`,
+      name: "socImp_3",
+      options: ["1", "2", "3"],
+      required: true
+    },
+    {
+      prompt: `<p>How <b>confident</b> are you about your answer for the <b>disgusted</b> reaction?</p>`,
+      name: "socConfidenceImp_3",
+      options: ["0%", "25%", "50%", "75%", "100%"],
+      required: true
+    }
+  ]}
+
+var nonsocImpPostTest = {
+  type: jsPsychSurveyMultiChoice,
+  on_load: postTestOnLoad,
+  preamble:`<p>Now we're going to tell you how the experiment with shapes and colors works. In this task, each approaching shape, response color, and feedback polygon has a value. 
+    The response values contribute to the approaching shape values to determine your feedback. Each of the three response values is a number between 1-3. Below, 
+    you will indicate what value (1-3) you believe is assigned to each response. You will also indicate your confidence level about each answer.</p>`, 
+  questions: [
+    {
+      prompt: `<p>What <b>value</b> is assigned to the <b>yellow</b> response?</p>
+      <p><img src="${RESP_IMG_N[1]}" style="width:140px;"></p>`,
+      name: "nonsocImp_1",
+      options: ["1", "2", "3"],
+      required: true
+    },
+    {
+      prompt: `<p>How <b>confident</b> are you about your answer for the <b>yellow</b> response?</p>`,
+      name: "nonsocConfidenceImp_1",
+      options: ["0%", "25%", "50%", "75%", "100%"],
+      required: true
+    },
+    {
+      prompt: `<p>What <b>value</b> is assigned to the <b>red</b> response?</p>
+      <p><img src="${RESP_IMG_N[2]}" style="width:140px;"></p>`,
+      name: "nonsocImp_2",
+      options: ["1", "2", "3"],
+      required: true
+    },
+    {
+      prompt: `<p>How <b>confident</b> are you about your answer for the <b>red</b> response?</p>`,
+      name: "nonsocConfidenceImp_2",
+      options: ["0%", "25%", "50%", "75%", "100%"],
+      required: true
+    },
+    {
+      prompt: `<p>What <b>value</b> is assigned to the <b>blue</b> response?</p>
+      <p><img src="${RESP_IMG_N[3]}" style="width:140px;"></p>`,
+      name: "nonsocImp_3",
+      options: ["1", "2", "3"],
+      required: true
+    },
+    {
+      prompt: `<p>How <b>confident</b> are you about your answer for the <b>blue</b> response?</p>`,
+      name: "nonsocConfidenceImp_3",
+      options: ["0%", "25%", "50%", "75%", "100%"],
+      required: true
+    }
+  ]}
+
+const filename = `${prolific_pid}.csv`;
+
+const save_data = {
+  type: jsPsychPipe,
+  action: "save",
+  experiment_id: "xyHIGnWzpPuY",
+  filename: filename,
+  data_string: ()=>jsPsych.data.get().csv()
+};
+
+var ProlificCode = {
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: `
+    <div style="
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    ">
+      <div style="
+        max-width: 1000px;
+        margin: 0 auto;
+        text-align: center;
+      ">
+        <p>Thank you for participating in this experiment!</p>
+        <p>Your Prolific completion code is: </p>
+        <p>Your Prolific redirection link is: </p>
+        <p>You may close this page once you have what you need.</p>
+      </div>
+    </div>`,
+  post_trial_gap: 1000,
+  choices: "NO_KEYS"
+};
+// Psuedorandomization using odd and even last numbers in prolific_pid
+let socialFirst;
+
+if (prolific_pid) {
+  // Simple hash: sum of character codes
+  let hash = 0;
+  for (let i = 0; i < prolific_pid.length; i++) {
+    hash += prolific_pid.charCodeAt(i);
+  }
+  socialFirst = (hash % 2 === 0);
+} else {
+  // Fallback if no prolific_pid
+  socialFirst = (Math.random() < 0.5);
+}
+console.log("socialFirst =", socialFirst);
+
+jsPsych.data.addProperties({
+  ID: prolific_pid,
+  socialFirst: socialFirst
+});
+
+timeline.push(consent);
+timeline.push(welcome);
+timeline.push(demographics);
+//timeline.push(SRS);
+
+if (socialFirst) {
+  timeline.push(social_instructions);
+  timeline.push({
+    timeline: [...SocTrial],
+    repetitions: 50
+  });
+  timeline.push(ShortBreakTrial);
+  timeline.push({
+    timeline: [...SocTrial],
+    repetitions: 50
+  });
+
+  timeline.push(LongBreakTrial)
+
+  timeline.push(nonsocial_instructions);
+  timeline.push({
+    timeline: [...NonsocTrial],
+    repetitions: 50
+  });
+  timeline.push(ShortBreakTrial);
+  timeline.push({
+    timeline: [...NonsocTrial],
+    repetitions: 50
+  }); 
+
+} else {
+  timeline.push(nonsocial_instructions);
+  timeline.push({
+    timeline: [...NonsocTrial],
+    repetitions: 50
+  }); 
+  timeline.push(ShortBreakTrial);
+  timeline.push({
+    timeline: [...NonsocTrial],
+    repetitions: 50
+  }); 
+
+  timeline.push(LongBreakTrial)
+
+  timeline.push(social_instructions);
+  timeline.push({
+    timeline: [...SocTrial],
+    repetitions: 50
+  });
+  timeline.push(ShortBreakTrial);
+  timeline.push({
+    timeline: [...SocTrial],
+    repetitions: 50
+  });
+}
+
+timeline.push(MechPostTest);
+
+// Decide random order for post-surveys and push accordingly
+  const postSocialFirst = Math.random() < 0.5;
+  // record order choice in data
+  jsPsych.data.addProperties({ postSocialFirst });
+  if (postSocialFirst) {
+    timeline.push(socImpPostTest);
+    timeline.push(nonsocImpPostTest);
+  } else {
+    timeline.push(nonsocImpPostTest);
+    timeline.push(socImpPostTest);
+  }
+console.log("postSocialFirst =",postSocialFirst);
+
+timeline.push(save_data);
+timeline.push(ProlificCode);
+
 jsPsych.run(timeline);
 
-} // end boot()
 </script>
-</body>
 </html>
