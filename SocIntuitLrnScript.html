@@ -407,7 +407,12 @@ window.downloadCSV = function() {
 };
 
 /* ── jsPsych init ── */
-var jsPsych = initJsPsych();
+var jsPsych = initJsPsych(
+  { 
+  on_finish: () => {
+    jsPsych.data.get().localSave('csv', 'test_data.csv'); // DON'T FORGET TO REMOVE THIS ON FINISH BEFORE UPLOADING THE FINAL VERSION
+    }
+   });
 
 // Preload images and videos
 
@@ -1306,7 +1311,7 @@ var ProlificCode = {
       </div>
     </div>`,
   post_trial_gap: 1000,
-  choices: "NO_KEYS"
+  choices: "ALL_KEYS" // DON'T FORGET TO CHANGE THIS BACK TO "NO_KEYS"
 };
 // Psuedorandomization using odd and even last numbers in prolific_pid
 let socialFirst;
@@ -1331,10 +1336,10 @@ jsPsych.data.addProperties({
 
 timeline.push(consent);
 timeline.push(welcome);
-//timeline.push(demographics);
-//timeline.push(SRS);
-//timeline.push(IUS);
-//timeline.push(USID);
+timeline.push(demographics);
+timeline.push(SRS);
+timeline.push(IUS);
+timeline.push(USID);
 
 if (socialFirst) {
   timeline.push(social_instructions);
