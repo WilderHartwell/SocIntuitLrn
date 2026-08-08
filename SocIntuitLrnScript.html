@@ -82,9 +82,21 @@ function buildTrialHTML(trialNum) {
     // Use blob URL if available, fall back to original URL
   var scenStim = videoBlobURLs[String(scenVal)] || SCEN_VIDEO[String(scenVal)];
 
-  pendingRand = parseFloat((1.1 + Math.random()*0.8).toFixed(3));
+  pendingRand = parseFloat((1.5 + Math.random()*0.4).toFixed(3));
 
   return `
+  <!-- Goal image overlay -->
+  <img src="${OUT_IMG['0']}" style="
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    width: 115px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    pointer-events: none;
+    z-index: 9999;
+  ">
+
   <div style="
     display:flex;
     flex-direction:column;
@@ -168,6 +180,18 @@ function buildTrialOut(trialNum) {
   console.log(outStim);
 
   return `
+  <!-- Goal image overlay -->
+  <img src="${OUT_IMG['0']}" style="
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    width: 115px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    pointer-events: none;
+    z-index: 9999;
+  ">
+
   <div style="
     display:flex;
     flex-direction:column;
@@ -202,6 +226,18 @@ function buildTrialHTML_N(trialNum) {
   pendingRand = parseFloat((1.1 + Math.random()*0.8).toFixed(3));
 
   return `
+  <!-- Goal image overlay -->
+  <img src="${OUT_IMG_N['0']}" style="
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    width: 115px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    pointer-events: none;
+    z-index: 9999;
+  ">
+
   <div style="
     display:flex;
     flex-direction:column;
@@ -284,6 +320,18 @@ function buildTrialOut_N(trialNum) {
   console.log(outStim_N);
 
   return `
+  <!-- Goal image overlay -->
+  <img src="${OUT_IMG_N['0']}" style="
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    width: 115px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    pointer-events: none;
+    z-index: 9999;
+  ">
+
   <div style="
     display:flex;
     flex-direction:column;
@@ -359,11 +407,7 @@ window.downloadCSV = function() {
 };
 
 /* ── jsPsych init ── */
-var jsPsych = initJsPsych({ 
-  on_finish: () => {
-    jsPsych.data.get().localSave('csv', 'test_data.csv');
-    }
-   });
+var jsPsych = initJsPsych();
 
 // Preload images and videos
 
@@ -443,10 +487,10 @@ var consent = {
         text-align: left;
       ">
               <h3>Exempt Information Sheet</h3>
-              <p>You are being invited to participate in a research study titled Social Learning. This study is being done by Leslie Carver and Wilder Hartwell from UC San Diego. You were selected to participate in this study because you are an adult with or without autism spectrum disorder.</p>
-              <p>The purpose of this research study is to obtain greater knowledge about social and nonsocial learning. Your participation in this research should last approximately 30 - 60 minutes. If you agree to take part in this study, you will be asked to complete a task on the computer that will take approximately 30 - 60 minutes. The task will involve responding to cues to get a desire outcome.</p>
+              <p>You are being invited to participate in a research study titled Social Learning. This study is being done by Dr. Leslie Carver and Wilder Hartwell from UC San Diego. You were selected to participate in this study because you are an adult 18 years or older with or without autism spectrum disorder.</p>
+              <p>The purpose of this research study is to obtain greater knowledge about social and nonsocial learning. Your participation in this research should last approximately 40 - 60 minutes. If you agree to take part in this study, you will be asked to complete a task on the computer that will involve responding to cues to get a desired outcome.</p>
               <p>Your participation in this study is completely voluntary and you can withdraw at any time. Choosing not to participate or withdrawing will result in no penalty or loss of benefits to which you are entitled. You are free to skip any question that you choose.</p>
-              <p>If you have questions about this project or if you have a research-related problem, you may contact the researcher, Leslie Carver, 858-757-4513. If you have any questions concerning your rights as a research subject, you may contact the UC San Diego Office of IRB Administration at irb@ucsd.edu or 858-246-4777.</p>
+              <p>If you have questions about this project or if you have a research-related problem, you may contact the researcher, Leslie Carver at 858-757-4513. If you have any questions concerning your rights as a research subject, you may contact the UC San Diego Office of IRB Administration at irb@ucsd.edu or 858-246-4777.</p>
               <p>By participating in this research you are indicating that you are at least 18 years old, have read this consent form, and agree to participate in this research study. Please keep this consent form for your records.</p>
               <p>If you agree to participate, press the enter key to continue. If you no longer want to participate, please close the webpage.</p>
               </div>
@@ -454,6 +498,7 @@ var consent = {
  post_trial_gap: 1000,
  choices: ['Enter']
 };
+
 
 
 var welcome = {
@@ -509,7 +554,7 @@ var demographics = {
 
 var SRS = {
   type: jsPsychSurveyMultiChoice,
-  preamble: `<p>Last step before you begin the experimental task! Please answer this short survey:</p> <p><b> How true is the following statement for you?</b></p>`,
+  preamble: `<p>Now you will fill out three short questionnaires. Please answer this short survey (1/3):</p> <p><b> How true is the following statement for you?</b></p>`,
   questions: [  
     { name: 'SRS1', prompt: "When under stress, I engage in rigid or inflexible patterns of behavior that seem odd to people.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true },
     { name: 'SRS2', prompt: "I am usually aware of how others are feeling.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
@@ -529,7 +574,284 @@ var SRS = {
     { name: 'SRS16', prompt: "I tend to think about people in the same way that I do objects.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  }
   ],
   }
+var IUS = {
+  type: jsPsychSurveyMultiChoice,
+  preamble: `<p>Please answer this short survey (2/3): </p> <p><b> How characteristic is the follow statement of you?</b>`,
+  questions: [
+    {
+      name: 'IUS1',
+      prompt: "Unforseen events upset me greatly.",
+      options: ['entirely characteristic of me', 'mostly characteristic of me', 'moderately characteristic of me', 'slightly characteristic of me', 'not at all characteristic of me'],
+      required: true,
+    },
+    {
+      name: 'IUS2',
+      prompt: 'It frustrates me not having all of the information I need.',
+      options: ['entirely characteristic of me', 'mostly characteristic of me', 'moderately characteristic of me', 'slightly characteristic of me', 'not at all characteristic of me'],
+      required: true
+    },
+    {
+      name: 'IUS3',
+      prompt: 'One should always look ahead so as to avoid surprises.',
+      options: ['entirely characteristic of me', 'mostly characteristic of me', 'moderately characteristic of me', 'slightly characteristic of me', 'not at all characteristic of me'],
+      required: true
+    },
+    {
+      name: 'IUS4',
+      prompt: 'A small, unforeseen event can spoil everything, even with the best of planning.',
+      options: ['entirely characteristic of me', 'mostly characteristic of me', 'moderately characteristic of me', 'slightly characteristic of me', 'not at all characteristic of me'],
+      required: true
+    },
+    {
+      name: 'IUS5',
+      prompt: 'I always want to know what the future has in store for me.',
+      options: ['entirely characteristic of me', 'mostly characteristic of me', 'moderately characteristic of me', 'slightly characteristic of me', 'not at all characteristic of me'],
+      required: true
+    },
+    {
+      name: 'IUS6',
+      prompt: `I can't stand being taken by surprise.`,
+      options: ['entirely characteristic of me', 'mostly characteristic of me', 'moderately characteristic of me', 'slightly characteristic of me', 'not at all characteristic of me'],
+      required: true
+    },
+    {
+      name: 'IUS7',
+      prompt: 'I should be able to organize everything in advance.',
+      options: ['entirely characteristic of me', 'mostly characteristic of me', 'moderately characteristic of me', 'slightly characteristic of me', 'not at all characteristic of me'],
+      required: true
+    },
+    {
+      name: 'IUS8',
+      prompt: 'Uncertainty keeps me from living a full life.',
+      options: ['entirely characteristic of me', 'mostly characteristic of me', 'moderately characteristic of me', 'slightly characteristic of me', 'not at all characteristic of me'],
+      required: true
+    },
+    {
+      name: 'IUS9',
+      prompt: `When it's time to act, uncertainty paralyses me.`,
+      options: ['entirely characteristic of me', 'mostly characteristic of me', 'moderately characteristic of me', 'slightly characteristic of me', 'not at all characteristic of me'],
+      required: true
+    },
+    {
+      name: 'IUS10',
+      prompt: `When I am uncertain I can't function very well.`,
+      options: ['entirely characteristic of me', 'mostly characteristic of me', 'moderately characteristic of me', 'slightly characteristic of me', 'not at all characteristic of me'],
+      required: true
+    },
+    {
+      name: 'IUS11',
+      prompt: `The smallest doubt can stop me from acting.`,
+      options: ['entirely characteristic of me', 'mostly characteristic of me', 'moderately characteristic of me', 'slightly characteristic of me', 'not at all characteristic of me'],
+      required: true
+    },
+    {
+      name: 'IUS12',
+      prompt: `I must get away from all uncertain situations.`,
+      options: ['entirely characteristic of me', 'mostly characteristic of me', 'moderately characteristic of me', 'slightly characteristic of me', 'not at all characteristic of me'],
+      required: true
+    }
+  ]
+}
 
+var USID = {
+  type: jsPsychSurveyMultiChoice,
+  preamble: `<p>Please answer this short survey (3/3): </p> <p><b> How much do you agree with the following statement?</b>`,
+  randomize_question_order: true,
+  questions: [
+    {
+      name: 'USIDia1',
+      prompt: `When I make a decision, it is more important for me to feel the decision is right than to have a rational reason for it.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDia2',
+      prompt: `When I make a decision, I trust my inner feeling and reactions.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDia3',
+      prompt: `With most decisions it makes sense to completely rely on your feelings.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDia4',
+      prompt: `I prefer drawing conclusions based on my feelings, my knowledge of human nature, and my experience of life.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDia5',
+      prompt: `Using my gut feelings usually works well for me in figuring out problems in my life.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDia6',
+      prompt: `I believe in trusting my hunches.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDia7',
+      prompt: `I hardly ever go wrong when I listen to my deepest gut feelings to find an answer.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDia8',
+      prompt: `I tend to use my heart as a guide for my actions.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDis9',
+      prompt: `I generally make snap decisions.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDis10',
+      prompt: `I make quick decisions.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDis11',
+      prompt: `I am often aware of how to decide even before I review all aspects.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDis12',
+      prompt: `I've had enough experience to just know what I need to do most of the time without trying to figure it out every time.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDis13',
+      prompt: `The right way to decide usually comes to mind almost immediately.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDis14',
+      prompt: `I typically figure out the way to decide swiftly.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDis15',
+      prompt: `I quickly do the right thing when deciding because I've often faced almost the same thing before.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDis16',
+      prompt: `I rarely need to mull things over; how to decide usually becomes quickly apparent.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdp17',
+      prompt: `Developing a clear plan is very important to me.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdp18',
+      prompt: `I like detailed action plans.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdp19',
+      prompt: `I prefer well-prepared meetings with a clear agenda and strict time management.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdp20',
+      prompt: `I make definite engagements, and I follow up meticulously.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdp21',
+      prompt: `When I make decisions, I proceed step-by-step.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdp22',
+      prompt: `Before making decisions I usually think about the goals I want to achieve.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdp23',
+      prompt: `I prefer making detailed plans rather than leaving things to chance.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdp24',
+      prompt: `I usually have clear, explainable reasons for my decisions.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdk25',
+      prompt: `I want to have a full understanding of all problems.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdk26',
+      prompt: `I like to analyze problems.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdk27',
+      prompt: `I study every problem until I understand the underlying logic.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdk28',
+      prompt: `I have no problem thinking things through carefully.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdk29',
+      prompt: `I enjoy intellectual challenges.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdk30',
+      prompt: `I enjoy solving problems that require hard thinking.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdk31',
+      prompt: `I prefer complex problems to simple problems.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdk32',
+      prompt: `I enjoy thinking in abstract terms.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+  ]
+}
 
 var social_instructions = {
   type: jsPsychHtmlKeyboardResponse,
@@ -548,11 +870,13 @@ var social_instructions = {
         At the bottom, you will see your possible reactions with their associated keys. Your task is to react to the person approaching you in a way that will get them 
         to <b>smile</b> at you as is <b>shown below.</b> </p>
         <p><img src="${OUT_IMG[0]}" style="width:200px;"></p>
-        <p> Use the "f," "j," and "l" keys to respond. You only have until the end of the approach to do so. You will see the person's feedback after you respond. 
-        Importantly, the person is from a different culture where their response to you may not align with what you would expect in your real life. 
+        <p> The goal expression will be displayed in the upper right corner in case you forget. The feedback the person gives you on each trial informs their opinion of you, 
+        so the feedback and approach you get on the next trial is partially influenced by their previous opinion of you.
+        Use the "f," "j," and "l" keys to respond. You only have until the end of the approach to do so. You will see the person's feedback after you respond. 
+        Importantly, the person's response to you may not align with what you would expect in your real life. 
         You will get a break halfway through the task.</p>
         
-      <p>Press <b>enter</b> to begin.</p>
+      <p>Press <b>enter</b> to begin the <b>practice trials</b>.</p>
     </div>`,
   post_trial_gap: 2000,
   choices: ['Enter']
@@ -575,8 +899,10 @@ var nonsocial_instructions = {
         At the bottom, you will see three colors with their associated keys. Your task is to respond to the shape getting closer to you using one of the three colors
         such that the next shape you see is the polygon <b>shown below.</b></p>
         <p><img src="${OUT_IMG_N[0]}" style="width:200px;"></p>
-        <p>Use the "f," "j," and "l" keys to respond. You only have until the shape nears you to do so. You will see the feedback polygon after you respond. You will get a break halfway through the task.</p>
-      <p>Press <b>enter</b> to begin.</p>
+        <p>The goal polygon will be displayed in the upper right corner in case you forget. The feedback polygon on each trial informs the shape's state, so the feedback and approach you get on the next trial is 
+          partially influenced by the previous polygon state. Use the "f," "j," and "l" keys to respond. You only have until the shape nears you to do so. You will see the feedback polygon after you respond. 
+          You will get a break halfway through the task.</p>
+      <p>Press <b>enter</b> to begin the <b>practice trials</b>.</p>
     </div>`,
   post_trial_gap: 2000,
   choices: ['Enter']
@@ -749,6 +1075,24 @@ NonsocTrial.push({
     },
   ]
 })
+var MainTaskStart = {
+  type: jsPsychHtmlKeyboardResponse,
+    stimulus: `<div style="
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      max-width: 1000px;
+      margin: 0 auto;
+      ">
+      <p><h3>PRACTICE COMPLETE</h3> </p>
+      <p>Now you will start the real task.</p>
+      <p>Press <b>enter</b> to continue.</p>
+        </div>`,
+    post_trial_gap: 1000,
+    choices: ['Enter']
+};
 
 var ShortBreakTrial = {
     type: jsPsychHtmlKeyboardResponse,
@@ -762,7 +1106,7 @@ var ShortBreakTrial = {
       margin: 0 auto;
       ">
       <p>Good job! You can take a short break now.</p>
-      <p>Press <b>enter</b> when you're ready to continue.
+      <p>Press <b>enter</b> when you're ready to continue.</p>
         </div>`,
     post_trial_gap: 1000,
     choices: ['Enter']
@@ -781,7 +1125,7 @@ var LongBreakTrial = {
       ">
       <p>Good job! You have completed half of the experiment! Now you're going to do a different task.</p>
       <p>You can take a break now.</p>
-      <p>Press <b>enter</b> when you're ready to continue.
+      <p>Press <b>enter</b> when you're ready to continue.</p>
       </div>`,
     post_trial_gap: 1000,
     choices: ['Enter']
@@ -796,66 +1140,86 @@ function postTestOnLoad() {
   }
 }
 
-var MechPostTest = {
+var socMechPostTest = {
     type: jsPsychSurveyMultiChoice,
     on_load: postTestOnLoad,
-    preamble: `<p><b>Now we're going to ask you a couple questions about how the experiment that shows <b>people</b> works. Please answer to the best of your ability based on your observations during the experiment. It's ok if you're not confident.</b></p>`,
+    preamble: `<p><b>Now we're going to ask you a couple questions about how the <b>people</b> experiment works. Please answer to the best of your ability based on your observations during the experiment. It's ok if you're not confident.</b></p>`,
     questions: [
       {
-        prompt: "What determines the feedback you get on each trial?",
-        name: "Mech",
-        options: ["It's random", "Only the way the person approaches", "Only my reaction", "Both the reaction and the approach"],
+        prompt: "Other than the previous trial's feedback, what determines the feedback you get on each trial?",
+        name: "socMech",
+        options: ["It's random", "Only the way the person approaches", "Only my reaction", "Both my reaction and the approach"],
         required: true
       },
       {
         prompt: "How confident are you about your answer?",
-        name: "ConfidenceMech",
+        name: "socConfidenceMech",
         options:["0%", "25%", "50%", "75%", "100%"]
       }
     ]}
 
+    var nonsocMechPostTest = {
+    type: jsPsychSurveyMultiChoice,
+    on_load: postTestOnLoad,
+    preamble: `<p><b>Now we're going to ask you a couple questions about how the <b>shapes and colors</b> experiment works. Please answer to the best of your ability based on your observations during the experiment. It's ok if you're not confident.</b></p>`,
+    questions: [
+      {
+        prompt: "Other than the previous trial's feedback, what determines the feedback you get on each trial?",
+        name: "nonsocMech",
+        options: ["It's random", "Only the way the shape approaches", "Only my response", "Both my response and the approach"],
+        required: true
+      },
+      {
+        prompt: "How confident are you about your answer?",
+        name: "nonsocConfidenceMech",
+        options:["0%", "25%", "50%", "75%", "100%"]
+      }
+    ]}
+
+
 var socImpPostTest = {
   type: jsPsychSurveyMultiChoice,
   on_load: postTestOnLoad,
-  preamble:`<p>Now we're going to tell you how the experiment with people works. In this task, each scenario, reaction, and feedback option has a value. 
-    The reaction values contribute to the scenario values to determine your feedback. Each of the three reaction values is a number between 1-3. Below, 
+  preamble:`<p>Now we're going to tell you how the <b>people</b> experiment works. In this task, each approach, reaction, and feedback option has a value. 
+    The reaction values contribute to the approach values to determine the change in feedback relative to the last trial's feedback. Each of the three reaction values is a number between 1-3. Below, 
     you will indicate what value (1-3) you believe is assigned to each reaction. You will also indicate your confidence level about each answer.</p>`, 
+  randomize_question_order: true,
   questions: [
     {
       prompt: `<p>What <b>value</b> is assigned to the <b>neutral</b> reaction?</p>
-      <p><img src="${RESP_IMG[3]}" style="width:140px;"></p>`,
+      <img src="${RESP_IMG[1]}" style="width:140px;">`,
       name: "socImp_1",
       options: ["1", "2", "3"],
       required: true
     },
     {
-      prompt: `<p>How <b>confident</b> are you about your answer for the <b>neutral</b> reaction?</p>`,
+      prompt: `How <b>confident</b> are you about your answer for the <b>neutral</b> reaction?`,
       name: "socConfidenceImp_1",
       options: ["0%", "25%", "50%", "75%", "100%"],
       required: true
     },
     {
       prompt: `<p>What <b>value</b> is assigned to the <b>fearful</b> reaction?</p>
-      <p><img src="${RESP_IMG[1]}" style="width:140px;"></p>`,
+      <img src="${RESP_IMG[2]}" style="width:140px;">`,
       name: "socImp_2",
       options: ["1", "2", "3"],
       required: true
     },
     {
-      prompt: `<p>How <b>confident</b> are you about your answer for the <b>fearful</b> reaction?</p>`,
+      prompt: `How <b>confident</b> are you about your answer for the <b>fearful</b> reaction?`,
       name: "socConfidenceImp_2",
       options: ["0%", "25%", "50%", "75%", "100%"],
       required: true
     },
     {
       prompt: `<p>What <b>value</b> is assigned to the <b>disgusted</b> reaction?</p>
-      <p><img src="${RESP_IMG[2]}" style="width:140px;"></p>`,
+      <img src="${RESP_IMG[3]}" style="width:140px;">`,
       name: "socImp_3",
       options: ["1", "2", "3"],
       required: true
     },
     {
-      prompt: `<p>How <b>confident</b> are you about your answer for the <b>disgusted</b> reaction?</p>`,
+      prompt: `How <b>confident</b> are you about your answer for the <b>disgusted</b> reaction?`,
       name: "socConfidenceImp_3",
       options: ["0%", "25%", "50%", "75%", "100%"],
       required: true
@@ -865,19 +1229,20 @@ var socImpPostTest = {
 var nonsocImpPostTest = {
   type: jsPsychSurveyMultiChoice,
   on_load: postTestOnLoad,
-  preamble:`<p>Now we're going to tell you how the experiment with shapes and colors works. In this task, each approaching shape, response color, and feedback polygon has a value. 
-    The response values contribute to the approaching shape values to determine your feedback. Each of the three response values is a number between 1-3. Below, 
+  preamble:`<p>Now we're going to tell you how the <b>shapes and colors</b> experiment works. In this task, each approaching shape, response color, and feedback polygon has a value. 
+    The response values contribute to the scenario values to determine the change in feedback relative to the last trial's feedback. Each of the three response values is a number between 1-3. Below, 
     you will indicate what value (1-3) you believe is assigned to each response. You will also indicate your confidence level about each answer.</p>`, 
+  randomize_question_order: true,
   questions: [
     {
       prompt: `<p>What <b>value</b> is assigned to the <b>yellow</b> response?</p>
-      <p><img src="${RESP_IMG_N[1]}" style="width:140px;"></p>`,
+      <img src="${RESP_IMG_N[1]}" style="width:140px;">`,
       name: "nonsocImp_1",
       options: ["1", "2", "3"],
       required: true
     },
     {
-      prompt: `<p>How <b>confident</b> are you about your answer for the <b>yellow</b> response?</p>`,
+      prompt: `How <b>confident</b> are you about your answer for the <b>yellow</b> response?`,
       name: "nonsocConfidenceImp_1",
       options: ["0%", "25%", "50%", "75%", "100%"],
       required: true
@@ -910,9 +1275,9 @@ var nonsocImpPostTest = {
     }
   ]}
 
-const filename = `${prolific_pid}.csv`;
+var filename = `${prolific_pid}.csv`;
 
-const save_data = {
+var save_data = {
   type: jsPsychPipe,
   action: "save",
   experiment_id: "xyHIGnWzpPuY",
@@ -966,11 +1331,18 @@ jsPsych.data.addProperties({
 
 timeline.push(consent);
 timeline.push(welcome);
-timeline.push(demographics);
+//timeline.push(demographics);
 //timeline.push(SRS);
+//timeline.push(IUS);
+//timeline.push(USID);
 
 if (socialFirst) {
   timeline.push(social_instructions);
+  timeline.push({
+    timeline: [...SocTrial],
+    repetitions: 5
+  });
+  timeline.push(MainTaskStart);
   timeline.push({
     timeline: [...SocTrial],
     repetitions: 50
@@ -984,6 +1356,11 @@ if (socialFirst) {
   timeline.push(LongBreakTrial)
 
   timeline.push(nonsocial_instructions);
+  timeline.push({
+    timeline: [...NonsocTrial],
+    repetitions: 5
+  });
+  timeline.push(MainTaskStart);
   timeline.push({
     timeline: [...NonsocTrial],
     repetitions: 50
@@ -998,6 +1375,11 @@ if (socialFirst) {
   timeline.push(nonsocial_instructions);
   timeline.push({
     timeline: [...NonsocTrial],
+    repetitions: 5
+  });
+  timeline.push(MainTaskStart);
+  timeline.push({
+    timeline: [...NonsocTrial],
     repetitions: 50
   }); 
   timeline.push(ShortBreakTrial);
@@ -1009,6 +1391,11 @@ if (socialFirst) {
   timeline.push(LongBreakTrial)
 
   timeline.push(social_instructions);
+  timeline.push({
+    timeline: [...SocTrial],
+    repetitions: 5
+  });
+  timeline.push(MainTaskStart);
   timeline.push({
     timeline: [...SocTrial],
     repetitions: 50
