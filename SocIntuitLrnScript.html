@@ -1407,16 +1407,20 @@ if (socialFirst) {
   });
 }
 
-timeline.push(MechPostTest);
+
 
 // Decide random order for post-surveys and push accordingly
   const postSocialFirst = Math.random() < 0.5;
   // record order choice in data
   jsPsych.data.addProperties({ postSocialFirst });
   if (postSocialFirst) {
+    timeline.push(socMechPostTest);
+    timeline.push(nonsocMechPostTest);
     timeline.push(socImpPostTest);
     timeline.push(nonsocImpPostTest);
   } else {
+    timeline.push(nonsocMechPostTest);
+    timeline.push(socMechPostTest);
     timeline.push(nonsocImpPostTest);
     timeline.push(socImpPostTest);
   }
