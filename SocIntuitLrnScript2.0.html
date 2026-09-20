@@ -916,7 +916,7 @@ var social_instructions = {
   post_trial_gap: 2000,
   choices: ['Enter']
 };
-//You will see three pictures of facial expressions. Choose the one that you think will get the person approaching you to smile. The right reaction may not always be the same.
+
 var nonsocial_instructions = {
   type: jsPsychHtmlKeyboardResponse,
   on_load: function() { removeProgressBar(); },
@@ -930,8 +930,8 @@ var nonsocial_instructions = {
       max-width: 1000px;
       margin: 0 auto;
     ">
-      <p><b>Instructions</b></p> // bold the keys
-      <p style="margin-left: 10px; margin-right: 10px;">On your screen, you will see a shape getting closer to you. Below that, you will see three colors with their associated keys. Using the "f," "j," and "l" keys, 
+      <p><b>Instructions</b></p>
+      <p style="margin-left: 10px; margin-right: 10px;">On your screen, you will see a shape getting closer to you. Below that, you will see three colors with their associated keys. Using the <b>F</b>, <b>J</b>, and <b>L</b> keys, 
         choose the color that you think will make the shape transform into the <b>star-like polygon</b>. The goal polygon is shown below and will be in the upper-right corner during the task.</p>
         <p><img src="${OUT_IMG_N[0]}" style="width:200px;"></p>
         <p>The correct response to each shape may differ across trials. It's ok if you feel like you're guessing. You will only have until the end of the approach to respond. You will see the feedback polygon after you respond. </p>  
