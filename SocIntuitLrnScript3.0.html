@@ -1418,28 +1418,28 @@ jsPsych.data.addProperties({
   socialFirst: socialFirst
 });
 
-//timeline.push(consent);
+timeline.push(consent);
 timeline.push(welcome);
-//timeline.push(demographics);
-//timeline.push(SRS);
-//timeline.push(IUS);
-//timeline.push(USID);
+timeline.push(demographics);
+timeline.push(SRS);
+timeline.push(IUS);
+timeline.push(USID);
 
 if (socialFirst) {
   timeline.push(social_instructions);
   timeline.push({
     timeline: [...SocTrial],
-    repetitions: 1
+    repetitions: 5
   });
   timeline.push(MainTaskStart);
   timeline.push({
     timeline: [...SocTrial],
-    repetitions: 10
+    repetitions: 100
   });
   timeline.push(ShortBreakTrial);
   timeline.push({
     timeline: [...SocTrial],
-    repetitions: 10
+    repetitions: 100
   });
 
   timeline.push(LongBreakTrial)
@@ -1447,34 +1447,34 @@ if (socialFirst) {
   timeline.push(nonsocial_instructions);
   timeline.push({
     timeline: [...NonsocTrial],
-    repetitions: 1
+    repetitions: 5
   });
   timeline.push(MainTaskStart);
   timeline.push({
     timeline: [...NonsocTrial],
-    repetitions: 10
+    repetitions: 100
   });
   timeline.push(ShortBreakTrial);
   timeline.push({
     timeline: [...NonsocTrial],
-    repetitions: 10
+    repetitions: 100
   }); 
 
 } else {
   timeline.push(nonsocial_instructions);
   timeline.push({
     timeline: [...NonsocTrial],
-    repetitions: 1
+    repetitions: 5
   });
   timeline.push(MainTaskStart);
   timeline.push({
     timeline: [...NonsocTrial],
-    repetitions: 10
+    repetitions: 100
   }); 
   timeline.push(ShortBreakTrial);
   timeline.push({
     timeline: [...NonsocTrial],
-    repetitions: 10
+    repetitions: 100
   }); 
 
   timeline.push(LongBreakTrial)
@@ -1482,17 +1482,17 @@ if (socialFirst) {
   timeline.push(social_instructions);
   timeline.push({
     timeline: [...SocTrial],
-    repetitions: 1
+    repetitions: 5
   });
   timeline.push(MainTaskStart);
   timeline.push({
     timeline: [...SocTrial],
-    repetitions: 10
+    repetitions: 100
   });
   timeline.push(ShortBreakTrial);
   timeline.push({
     timeline: [...SocTrial],
-    repetitions: 10
+    repetitions: 100
   });
 }
 // Decide random order for post-surveys and push accordingly
