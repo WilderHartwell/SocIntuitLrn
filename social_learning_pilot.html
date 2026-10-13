@@ -981,6 +981,148 @@ var nonsocial_instructions = {
   choices: ['Enter']
 };
 
+let SocTrialPrac = [];
+
+/* Practice: Social trials */
+SocTrialPrac.push({
+    timeline: [
+    {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: function() {
+      return buildTrialHTML(
+        jsPsych.data.get().filter({task: 'response_prac'}).count() + 1
+      );
+    },
+
+    choices: ['f','j','l'],
+    response_ends_trial: true,
+    trial_duration: 3000,
+    post_trial_gap: 250,
+
+  on_finish: function(data) {
+  var key = data.response;
+  var resp;
+
+  if (key === null) {
+    resp = RESP_VALS[Math.floor(Math.random() * RESP_VALS.length)];
+    data.timed_out = true;
+  } else {
+    // Normalize FIRST before anything else
+    if (typeof key === 'number') {
+      key = jsPsych.pluginAPI.convertKeyCodeToKeyCharacter(key);
+    }
+    if (typeof key === 'string') {
+      key = key.toLowerCase();
+    }
+    // Now update data.response and look up resp with the normalized key
+    data.response = key;
+    resp = KEY_TO_RESP[key];
+    data.timed_out = false;
+  }
+  console.log("resp number =", resp)
+  console.log("resp key =", data.response)
+
+      var outVal  = OUT_VALS[outIdx];
+      var scenVal = SCEN_VALS[scenIdx];
+
+      // Clean (noiseless) step drives OUT; correctness (out==0) is never
+      // touched by the scen-only noise added below. scen gets the SAME
+      // base step plus a random jitter, used only to pick the next
+      // scenario -- so the noise can't affect accuracy, only which
+      // scenario comes next.
+      var step      = outVal + (scenVal - resp);
+      var newOutIdx = circularMove(OUT_VALS, outIdx, step);
+
+      var noise      = scenNoise();
+      var stepScen   = step + noise;
+      var newScenIdx = absoluteMove(SCEN_VALS, stepScen);
+
+      var nudged = false;
+      var nudgeType = null;
+
+      // 3a. Period-1 lockup: nudge once the FULL state has failed to move
+      //     at all for 3 consecutive trials (a true fixed point).
+      if (newOutIdx === outIdx && newScenIdx === scenIdx) {
+        stallCount++;
+      } else {
+        stallCount = 0;
+      }
+      if (stallCount >= 3) {
+        nudged = true;
+        nudgeType = 'lockup';
+        var otherScenIdxs = SCEN_VALS.map(function(v, i) { return i; }).filter(function(i) { return i !== scenIdx; });
+        newScenIdx = otherScenIdxs[Math.floor(Math.random() * otherScenIdxs.length)];
+        stallCount = 0;
+        cycle7Count = 0;
+      }
+
+      // 3b. Period-7 cycle: catches the one residual always-correct-
+      //     forever exploit this design has -- a full 7-scenario loop.
+      //     Nudge once the new state matches the state from 7 trials
+      //     back, twice in a row.
+      if (!nudged) {
+        var sevenBack = stateHistory[0];
+        if (newOutIdx === sevenBack[0] && newScenIdx === sevenBack[1]) {
+          cycle7Count++;
+        } else {
+          cycle7Count = 0;
+        }
+        if (cycle7Count >= 2) {
+          nudged = true;
+          nudgeType = 'cycle7';
+          var otherScenIdxs2 = SCEN_VALS.map(function(v, i) { return i; }).filter(function(i) { return i !== scenIdx; });
+          newScenIdx = otherScenIdxs2[Math.floor(Math.random() * otherScenIdxs2.length)];
+          cycle7Count = 0;
+          stallCount = 0;
+        }
+      }
+
+      outIdx  = newOutIdx;
+      scenIdx = newScenIdx;
+
+      data.resp        = resp;
+      data.correct     = (OUT_VALS[newOutIdx] === 0) ? 1 : 0;
+      data.currentOut  = outVal;
+      data.currentScen = scenVal;
+      data.step        = step;
+      data.scenNoise   = noise;
+      data.stepScen    = stepScen;
+      data.nextOut     = OUT_VALS[newOutIdx];
+      data.nextScen    = SCEN_VALS[newScenIdx];
+      data.stallCount  = stallCount;
+      data.cycle7Count = cycle7Count;
+      data.nudged      = nudged;
+      data.nudgeType   = nudgeType;
+      data.scenStim   = SCEN_VIDEO[String(scenVal)].split('/').pop();
+      data.respStim   = RESP_IMG[resp].split('/').pop();
+      data.outStim    = OUT_IMG[String(outVal)].split('/').pop();
+      data.trialNum   = jsPsych.data.get().filter({task: 'response_prac'}).count(); // No +1 here because by the time on_finish runs, the current trial is already counted
+
+      // Slide the 7-trial history window for the period-7 nudge above.
+      stateHistory = stateHistory.slice(1).concat([[outIdx, scenIdx]]);
+    },
+
+    data: {
+      task: 'response_prac'
+    }
+    },
+    {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: function() {
+      return buildTrialOut(
+        jsPsych.data.get().filter({task: 'outcome_prac'}).count() + 1
+      );
+    },
+    trial_duration: 1500,
+    post_trial_gap: 250,
+    choices: "NO_KEYS",
+    data: {
+      task: 'outcome_prac'
+      }
+    },
+  ]
+})
+
 let SocTrial = [];
 
 /* Run Social trials */
@@ -1118,6 +1260,149 @@ SocTrial.push({
     choices: "NO_KEYS",
     data: {
       task: 'outcome'
+      }
+    },
+  ]
+})
+
+let NonsocTrialPrac = [];
+
+/* Practice: Nonsocial trials */
+NonsocTrialPrac.push({
+    timeline: [
+    {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: function() {
+      return buildTrialHTML_N(
+        jsPsych.data.get().filter({task: 'response_N_prac'}).count() + 1
+      );
+    },
+
+    choices: ['f','j','l'],
+    response_ends_trial: true,
+    trial_duration: 3000,
+    post_trial_gap: 250,
+
+
+    on_finish: function(data) {
+  var key = data.response;
+  var resp;
+
+  if (key === null) {
+    resp = RESP_VALS[Math.floor(Math.random() * RESP_VALS.length)];
+    data.timed_out = true;
+  } else {
+    // Normalize FIRST before anything else
+    if (typeof key === 'number') {
+      key = jsPsych.pluginAPI.convertKeyCodeToKeyCharacter(key);
+    }
+    if (typeof key === 'string') {
+      key = key.toLowerCase();
+    }
+    // Now update data.response and look up resp with the normalized key
+    data.response = key;
+    resp = KEY_TO_RESP[key];
+    data.timed_out = false;
+  }
+  console.log("resp number =", resp)
+  console.log("resp key =", data.response)
+
+      var outVal  = OUT_VALS[outIdx];
+      var scenVal = SCEN_VALS[scenIdx];
+
+      // Clean (noiseless) step drives OUT; correctness (out==0) is never
+      // touched by the scen-only noise added below. scen gets the SAME
+      // base step plus a random jitter, used only to pick the next
+      // scenario -- so the noise can't affect accuracy, only which
+      // scenario comes next.
+      var step      = outVal + (scenVal - resp);
+      var newOutIdx = circularMove(OUT_VALS, outIdx, step);
+
+      var noise      = scenNoise();
+      var stepScen   = step + noise;
+      var newScenIdx = absoluteMove(SCEN_VALS, stepScen);
+
+      var nudged = false;
+      var nudgeType = null;
+
+      // 3a. Period-1 lockup: nudge once the FULL state has failed to move
+      //     at all for 3 consecutive trials (a true fixed point).
+      if (newOutIdx === outIdx && newScenIdx === scenIdx) {
+        stallCount++;
+      } else {
+        stallCount = 0;
+      }
+      if (stallCount >= 3) {
+        nudged = true;
+        nudgeType = 'lockup';
+        var otherScenIdxs = SCEN_VALS.map(function(v, i) { return i; }).filter(function(i) { return i !== scenIdx; });
+        newScenIdx = otherScenIdxs[Math.floor(Math.random() * otherScenIdxs.length)];
+        stallCount = 0;
+        cycle7Count = 0;
+      }
+
+      // 3b. Period-7 cycle: catches the one residual always-correct-
+      //     forever exploit this design has -- a full 7-scenario loop.
+      //     Nudge once the new state matches the state from 7 trials
+      //     back, twice in a row.
+      if (!nudged) {
+        var sevenBack = stateHistory[0];
+        if (newOutIdx === sevenBack[0] && newScenIdx === sevenBack[1]) {
+          cycle7Count++;
+        } else {
+          cycle7Count = 0;
+        }
+        if (cycle7Count >= 2) {
+          nudged = true;
+          nudgeType = 'cycle7';
+          var otherScenIdxs2 = SCEN_VALS.map(function(v, i) { return i; }).filter(function(i) { return i !== scenIdx; });
+          newScenIdx = otherScenIdxs2[Math.floor(Math.random() * otherScenIdxs2.length)];
+          cycle7Count = 0;
+          stallCount = 0;
+        }
+      }
+
+      outIdx  = newOutIdx;
+      scenIdx = newScenIdx;
+
+      data.resp        = resp;
+      data.correct     = (OUT_VALS[newOutIdx] === 0) ? 1 : 0;
+      data.currentOut  = outVal;
+      data.currentScen = scenVal;
+      data.step        = step;
+      data.scenNoise   = noise;
+      data.stepScen    = stepScen;
+      data.nextOut     = OUT_VALS[newOutIdx];
+      data.nextScen    = SCEN_VALS[newScenIdx];
+      data.stallCount  = stallCount;
+      data.cycle7Count = cycle7Count;
+      data.nudged      = nudged;
+      data.nudgeType   = nudgeType;
+      data.scenStim   = SCEN_VIDEO_N[String(scenVal)].split('/').pop();
+      data.respStim   = RESP_IMG_N[resp].split('/').pop();
+      data.outStim    = OUT_IMG_N[String(outVal)].split('/').pop();
+      data.trialNum   = jsPsych.data.get().filter({task: 'response_N_prac'}).count(); // No +1 here because by the time on_finish runs, the current trial is already counted
+
+      // Slide the 7-trial history window for the period-7 nudge above.
+      stateHistory = stateHistory.slice(1).concat([[outIdx, scenIdx]]);
+    },
+
+    data: {
+      task: 'response_N_prac'
+    }
+    },
+    {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: function() {
+      return buildTrialOut_N(
+        jsPsych.data.get().filter({task: 'outcome_N_prac'}).count() + 1
+      );
+    },
+    trial_duration: 1500,
+    post_trial_gap: 250,
+    choices: "NO_KEYS",
+    data: {
+      task: 'outcome_N_prac'
       }
     },
   ]
@@ -1492,7 +1777,7 @@ timeline.push(USID);
 if (socialFirst) {
   timeline.push(social_instructions);
   timeline.push({
-    timeline: [...SocTrial],
+    timeline: [...SocTrialPrac],
     repetitions: 5
   });
   timeline.push(MainTaskStart);
@@ -1510,7 +1795,7 @@ if (socialFirst) {
 
   timeline.push(nonsocial_instructions);
   timeline.push({
-    timeline: [...NonsocTrial],
+    timeline: [...NonsocTrialPrac],
     repetitions: 5
   });
   timeline.push(MainTaskStart);
@@ -1527,7 +1812,7 @@ if (socialFirst) {
 } else {
   timeline.push(nonsocial_instructions);
   timeline.push({
-    timeline: [...NonsocTrial],
+    timeline: [...NonsocTrialPrac],
     repetitions: 5
   });
   timeline.push(MainTaskStart);
@@ -1545,7 +1830,7 @@ if (socialFirst) {
 
   timeline.push(social_instructions);
   timeline.push({
-    timeline: [...SocTrial],
+    timeline: [...SocTrialPrac],
     repetitions: 5
   });
   timeline.push(MainTaskStart);
