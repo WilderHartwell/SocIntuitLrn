@@ -41,20 +41,20 @@ const prolific_pid = urlParams.get('PROLIFIC_PID');
 
 /* ── Social stimulus maps ── */
 var BASE = 'https://wilderhartwell.github.io/SocIntuitLrn/stim/';
-var SCEN_VIDEO = { '0':BASE+'angry_greete.mp4', '1':BASE+'ground_greete.mp4', '2':BASE+'neutral_greete.mp4', '3':BASE+'smile_greete.mp4', '4':BASE+'sad_greete.mp4', '5':BASE+'shake_greete.mp4', '6':BASE+'wave_greete.mp4' };
-var RESP_IMG   = { '6':BASE+'fear_respf.png', '-8':BASE+'disgust_respf.png', '-1':BASE+'neutral_respf.png' };
-var RESP_LABEL = { '6':'Fear', '-8':'Disgust', '-1':'Neutral' };
-var KEY_MAP    = { '6':'F', '-8':'J', '-1':'L' };
-var KEY_TO_RESP = { 'f':6, 'j':-8, 'l':-1 };
+var SCEN_VIDEO = { '0':BASE+'angry_greete.mp4', '1':BASE+'ground_greete.mp4', '2':BASE+'neutral_greete.mp4', '3':BASE+'smile_greete.mp4', '4':BASE+'sad_greete.mp4' };
+var RESP_IMG   = { '-6':BASE+'fear_respf.png', '4':BASE+'disgust_respf.png', '-1':BASE+'neutral_respf.png' };
+var RESP_LABEL = { '-6':'Fear', '4':'Disgust', '-1':'Neutral' };
+var KEY_MAP    = { '-6':'F', '4':'J', '-1':'L' };
+var KEY_TO_RESP = { 'f':-6, 'j':4, 'l':-1 };
 var OUT_IMG    = { '0':BASE+'happy_fbe.jpg', '1':BASE+'disappoint_fbe.jpg', '2':BASE+'shock_fbe.jpg' };
 
 /* ── Nonsocial stimulus maps ── */
 var BASE_N = 'https://wilderhartwell.github.io/SocIntuitLrn/stim/';
-var SCEN_VIDEO_N = { '0':BASE_N+'Hexagon.mp4', '1':BASE_N+'Diamond.mp4', '2':BASE_N+'Triangle.mp4', '3':BASE_N+'Square.mp4', '4':BASE_N+'Trapezoid.mp4', '5':BASE_N+'Diamond.mp4', '6':BASE_N+'Triangle.mp4' };
-var RESP_IMG_N   = { '6':BASE_N+'Yellow.jpg', '-8':BASE_N+'Red.jpg', '-1':BASE_N+'Blue.jpg' };
-var RESP_LABEL_N = { '6':'Yellow', '-8':'Red', '-1':'Blue' };
-var KEY_MAP_N    = { '6':'F', '-8':'J', '-1':'L' };
-var KEY_TO_RESP_N = { 'f':6, 'j':-8, 'l':-1 };
+var SCEN_VIDEO_N = { '0':BASE_N+'Hexagon.mp4', '1':BASE_N+'Diamond.mp4', '2':BASE_N+'Triangle.mp4', '3':BASE_N+'Square.mp4', '4':BASE_N+'Trapezoid.mp4' };
+var RESP_IMG_N   = { '-6':BASE_N+'Yellow.jpg', '4':BASE_N+'Red.jpg', '-1':BASE_N+'Blue.jpg' };
+var RESP_LABEL_N = { '-6':'Yellow', '4':'Red', '-1':'Blue' };
+var KEY_MAP_N    = { '-6':'F', '4':'J', '-1':'L' };
+var KEY_TO_RESP_N = { 'f':-6, 'j':4, 'l':-1 };
 var OUT_IMG_N    = { '0':BASE_N+'Polygon_c.jpg', '1':BASE_N+'Polygon_b.jpg', '2':BASE_N+'Polygon_a.jpg' };
 
 /* ── Math helpers ── */
@@ -82,17 +82,17 @@ function absoluteMove(arr, delta) {
 
 /* ── State ── */
 var OUT_VALS  = [0, 1, 2];
-var SCEN_VALS = [0, 1, 2, 3, 4, 5, 6];
-var RESP_VALS = [6, -8, -1];
+var SCEN_VALS = [0, 1, 2, 3, 4];
+var RESP_VALS = [-6, 4, -1];
 var outIdx = 0, scenIdx = 0;    // both start at 0
 var stallCount  = 0;            // consecutive rounds where (out,scen) failed to move AT ALL
-var cycle7Count = 0;            // consecutive rounds of returning to the state from 7 trials back
-// Rolling history of the last 7 (outIdx, scenIdx) pairs, oldest first,
-// used by the period-7 nudge below. All start equal to the initial state
+var cycle5Count = 0;            // consecutive rounds of returning to the state from 5 trials back
+// Rolling history of the last 5 (outIdx, scenIdx) pairs, oldest first,
+// used by the period-5 nudge below. All start equal to the initial state
 // (there's no real history yet, so trial 0 is treated as the start state).
 var stateHistory = [
   [outIdx, scenIdx], [outIdx, scenIdx], [outIdx, scenIdx], [outIdx, scenIdx],
-  [outIdx, scenIdx], [outIdx, scenIdx], [outIdx, scenIdx]
+  [outIdx, scenIdx]
 ];
 // Scen-only noise: added to the step that picks the NEXT SCENARIO, never
 // to the step that picks the next OUT value -- so it has zero effect on
@@ -181,12 +181,12 @@ function buildTrialHTML(trialNum) {
     ">
 
       <div id="resp-card-1">
-        <img src="${RESP_IMG[6]}" style="width:140px;">
+        <img src="${RESP_IMG[-6]}" style="width:140px;">
         <p><b>F</b></p>
       </div>
 
       <div id="resp-card-2">
-        <img src="${RESP_IMG[-8]}" style="width:140px;">
+        <img src="${RESP_IMG[4]}" style="width:140px;">
         <p><b>J</b></p>
       </div>
 
@@ -319,12 +319,12 @@ function buildTrialHTML_N(trialNum) {
     ">
 
       <div id="resp-card-1">
-        <img src="${RESP_IMG_N[6]}" style="width:160px;">
+        <img src="${RESP_IMG_N[-6]}" style="width:160px;">
         <p><b>F</b></p>
       </div>
 
       <div id="resp-card-2">
-        <img src="${RESP_IMG_N[-8]}" style="width:160px;">
+        <img src="${RESP_IMG_N[4]}" style="width:160px;">
         <p><b>J</b></p>
       </div>
 
@@ -948,9 +948,9 @@ var social_instructions = {
       <p style="margin-left: 10px; margin-right: 10px;">On your screen, you will see a person approaching you. Below that, you will see three pictures of facial expressions with their associated keys. 
         Using the <b>F</b>, <b>J</b>, and <b>L</b> keys, choose the one that you think will make the person approaching you <b>smile</b>. The goal feedback is shown below and will be in the upper-right corner during the task.</p>
         <p><img src="${OUT_IMG[0]}" style="width:200px;"></p>
-        <p>The correct response to each approach may differ across trials. It's ok if you feel like you're guessing. It may be difficult in the beginning, but don't give up. You will only have until the end of the approach to respond. You will see the person's feedback after you respond. The person's feedback may not be what you would expect in real life. </p>
+        <p>The correct response to each approach will differ across trials, because the approaching person's recent feedback influences it. It's ok if you feel like you're guessing. It may be difficult in the beginning, but don't give up. You will only have until the end of the approach to respond. You will see the person's feedback after you respond. The person's feedback may not be what you would expect in real life. </p>
         <p>You will get a break halfway through the task.</p>
-        <p><b>Put your browser into fullscreen or else the task may not fit on your screen properly.</b><p>
+        <p><b>Put your browser into fullscreen to ensure you can see everything.</b><p>
         <p>Press <b>enter</b> to begin the <b>practice trials</b>.</p>
     </div>`,
   post_trial_gap: 2000,
@@ -974,9 +974,9 @@ var nonsocial_instructions = {
       <p style="margin-left: 10px; margin-right: 10px;">On your screen, you will see a shape getting closer to you. Below that, you will see three colors with their associated keys. Using the <b>F</b>, <b>J</b>, and <b>L</b> keys, 
         choose the color that you think will make the shape transform into the <b>star-like polygon</b>. The goal polygon is shown below and will be in the upper-right corner during the task.</p>
         <p><img src="${OUT_IMG_N[0]}" style="width:200px;"></p>
-        <p>The correct response to each shape may differ across trials. It's ok if you feel like you're guessing. It may be difficult in the beginning, but don't give up. You will only have until the end of the approach to respond. You will see the feedback polygon after you respond. </p>  
+        <p>The correct response to each shape will differ across trials, because the most recent feedback polygon influences it. It's ok if you feel like you're guessing. It may be difficult in the beginning, but don't give up. You will only have until the end of the approach to respond. You will see the feedback polygon after you respond. </p>  
         <p>You will get a break halfway through the task.</p>
-        <p><b>Put your browser into fullscreen or else the task may not fit on your screen properly.</b><p>
+        <p><b>Put your browser into fullscreen to ensure you can see everything.</b><p>
       <p>Press <b>enter</b> to begin the <b>practice trials</b>.</p>
     </div>`,
   post_trial_gap: 2000,
@@ -1055,26 +1055,26 @@ SocTrialPrac.push({
         var otherScenIdxs = SCEN_VALS.map(function(v, i) { return i; }).filter(function(i) { return i !== scenIdx; });
         newScenIdx = otherScenIdxs[Math.floor(Math.random() * otherScenIdxs.length)];
         stallCount = 0;
-        cycle7Count = 0;
+        cycle5Count = 0;
       }
 
-      // 3b. Period-7 cycle: catches the one residual always-correct-
-      //     forever exploit this design has -- a full 7-scenario loop.
-      //     Nudge once the new state matches the state from 7 trials
+      // 3b. Period-5 cycle: catches the one residual always-correct-
+      //     forever exploit this design has -- a full 5-scenario loop.
+      //     Nudge once the new state matches the state from 5 trials
       //     back, twice in a row.
       if (!nudged) {
-        var sevenBack = stateHistory[0];
-        if (newOutIdx === sevenBack[0] && newScenIdx === sevenBack[1]) {
-          cycle7Count++;
+        var fiveBack = stateHistory[0];
+        if (newOutIdx === fiveBack[0] && newScenIdx === fiveBack[1]) {
+          cycle5Count++;
         } else {
-          cycle7Count = 0;
+          cycle5Count = 0;
         }
-        if (cycle7Count >= 2) {
+        if (cycle5Count >= 2) {
           nudged = true;
-          nudgeType = 'cycle7';
+          nudgeType = 'cycle5';
           var otherScenIdxs2 = SCEN_VALS.map(function(v, i) { return i; }).filter(function(i) { return i !== scenIdx; });
           newScenIdx = otherScenIdxs2[Math.floor(Math.random() * otherScenIdxs2.length)];
-          cycle7Count = 0;
+          cycle5Count = 0;
           stallCount = 0;
         }
       }
@@ -1092,7 +1092,7 @@ SocTrialPrac.push({
       data.nextOut     = OUT_VALS[newOutIdx];
       data.nextScen    = SCEN_VALS[newScenIdx];
       data.stallCount  = stallCount;
-      data.cycle7Count = cycle7Count;
+      data.cycle5Count = cycle5Count;
       data.nudged      = nudged;
       data.nudgeType   = nudgeType;
       data.scenStim   = SCEN_VIDEO[String(scenVal)].split('/').pop();
@@ -1100,7 +1100,7 @@ SocTrialPrac.push({
       data.outStim    = OUT_IMG[String(outVal)].split('/').pop();
       data.trialNum   = jsPsych.data.get().filter({task: 'response_prac'}).count(); // No +1 here because by the time on_finish runs, the current trial is already counted
 
-      // Slide the 7-trial history window for the period-7 nudge above.
+      // Slide the 5-trial history window for the period-5 nudge above.
       stateHistory = stateHistory.slice(1).concat([[outIdx, scenIdx]]);
     },
 
@@ -1197,26 +1197,26 @@ SocTrial.push({
         var otherScenIdxs = SCEN_VALS.map(function(v, i) { return i; }).filter(function(i) { return i !== scenIdx; });
         newScenIdx = otherScenIdxs[Math.floor(Math.random() * otherScenIdxs.length)];
         stallCount = 0;
-        cycle7Count = 0;
+        cycle5Count = 0;
       }
 
-      // 3b. Period-7 cycle: catches the one residual always-correct-
-      //     forever exploit this design has -- a full 7-scenario loop.
-      //     Nudge once the new state matches the state from 7 trials
+      // 3b. Period-5 cycle: catches the one residual always-correct-
+      //     forever exploit this design has -- a full 5-scenario loop.
+      //     Nudge once the new state matches the state from 5 trials
       //     back, twice in a row.
       if (!nudged) {
-        var sevenBack = stateHistory[0];
-        if (newOutIdx === sevenBack[0] && newScenIdx === sevenBack[1]) {
-          cycle7Count++;
+        var fiveBack = stateHistory[0];
+        if (newOutIdx === fiveBack[0] && newScenIdx === fiveBack[1]) {
+          cycle5Count++;
         } else {
-          cycle7Count = 0;
+          cycle5Count = 0;
         }
-        if (cycle7Count >= 2) {
+        if (cycle5Count >= 2) {
           nudged = true;
-          nudgeType = 'cycle7';
+          nudgeType = 'cycle5';
           var otherScenIdxs2 = SCEN_VALS.map(function(v, i) { return i; }).filter(function(i) { return i !== scenIdx; });
           newScenIdx = otherScenIdxs2[Math.floor(Math.random() * otherScenIdxs2.length)];
-          cycle7Count = 0;
+          cycle5Count = 0;
           stallCount = 0;
         }
       }
@@ -1234,7 +1234,7 @@ SocTrial.push({
       data.nextOut     = OUT_VALS[newOutIdx];
       data.nextScen    = SCEN_VALS[newScenIdx];
       data.stallCount  = stallCount;
-      data.cycle7Count = cycle7Count;
+      data.cycle5Count = cycle5Count;
       data.nudged      = nudged;
       data.nudgeType   = nudgeType;
       data.scenStim   = SCEN_VIDEO[String(scenVal)].split('/').pop();
@@ -1242,7 +1242,7 @@ SocTrial.push({
       data.outStim    = OUT_IMG[String(outVal)].split('/').pop();
       data.trialNum   = jsPsych.data.get().filter({task: 'response'}).count(); // No +1 here because by the time on_finish runs, the current trial is already counted
 
-      // Slide the 7-trial history window for the period-7 nudge above.
+      // Slide the 5-trial history window for the period-5 nudge above.
       stateHistory = stateHistory.slice(1).concat([[outIdx, scenIdx]]);
     },
 
@@ -1340,26 +1340,26 @@ NonsocTrialPrac.push({
         var otherScenIdxs = SCEN_VALS.map(function(v, i) { return i; }).filter(function(i) { return i !== scenIdx; });
         newScenIdx = otherScenIdxs[Math.floor(Math.random() * otherScenIdxs.length)];
         stallCount = 0;
-        cycle7Count = 0;
+        cycle5Count = 0;
       }
 
-      // 3b. Period-7 cycle: catches the one residual always-correct-
-      //     forever exploit this design has -- a full 7-scenario loop.
-      //     Nudge once the new state matches the state from 7 trials
+      // 3b. Period-5 cycle: catches the one residual always-correct-
+      //     forever exploit this design has -- a full 5-scenario loop.
+      //     Nudge once the new state matches the state from 5 trials
       //     back, twice in a row.
       if (!nudged) {
-        var sevenBack = stateHistory[0];
-        if (newOutIdx === sevenBack[0] && newScenIdx === sevenBack[1]) {
-          cycle7Count++;
+        var fiveBack = stateHistory[0];
+        if (newOutIdx === fiveBack[0] && newScenIdx === fiveBack[1]) {
+          cycle5Count++;
         } else {
-          cycle7Count = 0;
+          cycle5Count = 0;
         }
-        if (cycle7Count >= 2) {
+        if (cycle5Count >= 2) {
           nudged = true;
-          nudgeType = 'cycle7';
+          nudgeType = 'cycle5';
           var otherScenIdxs2 = SCEN_VALS.map(function(v, i) { return i; }).filter(function(i) { return i !== scenIdx; });
           newScenIdx = otherScenIdxs2[Math.floor(Math.random() * otherScenIdxs2.length)];
-          cycle7Count = 0;
+          cycle5Count = 0;
           stallCount = 0;
         }
       }
@@ -1377,7 +1377,7 @@ NonsocTrialPrac.push({
       data.nextOut     = OUT_VALS[newOutIdx];
       data.nextScen    = SCEN_VALS[newScenIdx];
       data.stallCount  = stallCount;
-      data.cycle7Count = cycle7Count;
+      data.cycle5Count = cycle5Count;
       data.nudged      = nudged;
       data.nudgeType   = nudgeType;
       data.scenStim   = SCEN_VIDEO_N[String(scenVal)].split('/').pop();
@@ -1385,7 +1385,7 @@ NonsocTrialPrac.push({
       data.outStim    = OUT_IMG_N[String(outVal)].split('/').pop();
       data.trialNum   = jsPsych.data.get().filter({task: 'response_N_prac'}).count(); // No +1 here because by the time on_finish runs, the current trial is already counted
 
-      // Slide the 7-trial history window for the period-7 nudge above.
+      // Slide the 5-trial history window for the period-5 nudge above.
       stateHistory = stateHistory.slice(1).concat([[outIdx, scenIdx]]);
     },
 
@@ -1483,26 +1483,26 @@ NonsocTrial.push({
         var otherScenIdxs = SCEN_VALS.map(function(v, i) { return i; }).filter(function(i) { return i !== scenIdx; });
         newScenIdx = otherScenIdxs[Math.floor(Math.random() * otherScenIdxs.length)];
         stallCount = 0;
-        cycle7Count = 0;
+        cycle5Count = 0;
       }
 
-      // 3b. Period-7 cycle: catches the one residual always-correct-
-      //     forever exploit this design has -- a full 7-scenario loop.
-      //     Nudge once the new state matches the state from 7 trials
+      // 3b. Period-5 cycle: catches the one residual always-correct-
+      //     forever exploit this design has -- a full 5-scenario loop.
+      //     Nudge once the new state matches the state from 5 trials
       //     back, twice in a row.
       if (!nudged) {
-        var sevenBack = stateHistory[0];
-        if (newOutIdx === sevenBack[0] && newScenIdx === sevenBack[1]) {
-          cycle7Count++;
+        var fiveBack = stateHistory[0];
+        if (newOutIdx === fiveBack[0] && newScenIdx === fiveBack[1]) {
+          cycle5Count++;
         } else {
-          cycle7Count = 0;
+          cycle5Count = 0;
         }
-        if (cycle7Count >= 2) {
+        if (cycle5Count >= 2) {
           nudged = true;
-          nudgeType = 'cycle7';
+          nudgeType = 'cycle5';
           var otherScenIdxs2 = SCEN_VALS.map(function(v, i) { return i; }).filter(function(i) { return i !== scenIdx; });
           newScenIdx = otherScenIdxs2[Math.floor(Math.random() * otherScenIdxs2.length)];
-          cycle7Count = 0;
+          cycle5Count = 0;
           stallCount = 0;
         }
       }
@@ -1520,7 +1520,7 @@ NonsocTrial.push({
       data.nextOut     = OUT_VALS[newOutIdx];
       data.nextScen    = SCEN_VALS[newScenIdx];
       data.stallCount  = stallCount;
-      data.cycle7Count = cycle7Count;
+      data.cycle5Count = cycle5Count;
       data.nudged      = nudged;
       data.nudgeType   = nudgeType;
       data.scenStim   = SCEN_VIDEO_N[String(scenVal)].split('/').pop();
@@ -1528,7 +1528,7 @@ NonsocTrial.push({
       data.outStim    = OUT_IMG_N[String(outVal)].split('/').pop();
       data.trialNum   = jsPsych.data.get().filter({task: 'response_N'}).count(); // No +1 here because by the time on_finish runs, the current trial is already counted
 
-      // Slide the 7-trial history window for the period-7 nudge above.
+      // Slide the 5-trial history window for the period-5 nudge above.
       stateHistory = stateHistory.slice(1).concat([[outIdx, scenIdx]]);
     },
 
@@ -1785,12 +1785,12 @@ if (socialFirst) {
   timeline.push(MainTaskStart);
   timeline.push({
     timeline: [...SocTrial],
-    repetitions: 100
+    repetitions: 125
   });
   timeline.push(ShortBreakTrial);
   timeline.push({
     timeline: [...SocTrial],
-    repetitions: 100
+    repetitions: 125
   });
 
   timeline.push(LongBreakTrial)
@@ -1803,12 +1803,12 @@ if (socialFirst) {
   timeline.push(MainTaskStart);
   timeline.push({
     timeline: [...NonsocTrial],
-    repetitions: 100
+    repetitions: 125
   });
   timeline.push(ShortBreakTrial);
   timeline.push({
     timeline: [...NonsocTrial],
-    repetitions: 100
+    repetitions: 125
   }); 
 
 } else {
@@ -1820,12 +1820,12 @@ if (socialFirst) {
   timeline.push(MainTaskStart);
   timeline.push({
     timeline: [...NonsocTrial],
-    repetitions: 100
+    repetitions: 125
   }); 
   timeline.push(ShortBreakTrial);
   timeline.push({
     timeline: [...NonsocTrial],
-    repetitions: 100
+    repetitions: 125
   }); 
 
   timeline.push(LongBreakTrial)
@@ -1838,12 +1838,12 @@ if (socialFirst) {
   timeline.push(MainTaskStart);
   timeline.push({
     timeline: [...SocTrial],
-    repetitions: 100
+    repetitions: 125
   });
   timeline.push(ShortBreakTrial);
   timeline.push({
     timeline: [...SocTrial],
-    repetitions: 100
+    repetitions: 125
   });
 }
 // Decide random order for post-surveys and push accordingly
