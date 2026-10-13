@@ -1,0 +1,1585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Social Learning</title>
+  <script src="https://unpkg.com/jspsych@8.2.2"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@2.1.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-button-response@2.1.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-survey-multi-choice@2.1.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-preload@2.1.0"></script>
+  <script src="https://unpkg.com/@jspsych-contrib/plugin-pipe"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-survey-text@1.1.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-survey-likert@1.1.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-survey-html-form@1.0.3"></script>
+  <link href="https://unpkg.com/jspsych@8.2.2/css/jspsych.css" rel="stylesheet" type="text/css"/>
+  <style>
+  .jspsych-content {
+    max-width: none !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  .jspsych-display-element {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .jspsych-content-wrapper {
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+    padding-top: 10px !important;
+  }
+</style>
+</head>
+<body></body>
+<script>
+
+// Get Prolific ID from URL
+const urlParams = new URLSearchParams(window.location.search);
+const prolific_pid = urlParams.get('PROLIFIC_PID');
+
+/* ── Social stimulus maps ── */
+var BASE = 'https://wilderhartwell.github.io/SocIntuitLrn/stim/';
+var SCEN_VIDEO = { '0':BASE+'angry_greete.mp4', '1':BASE+'ground_greete.mp4', '2':BASE+'neutral_greete.mp4', '3':BASE+'smile_greete.mp4', '4':BASE+'sad_greete.mp4', '5':BASE+'shake_greete.mp4', '6':BASE+'wave_greete.mp4' };
+var RESP_IMG   = { '6':BASE+'fear_respf.png', '-8':BASE+'disgust_respf.png', '-1':BASE+'neutral_respf.png' };
+var RESP_LABEL = { '6':'Fear', '-8':'Disgust', '-1':'Neutral' };
+var KEY_MAP    = { '6':'F', '-8':'J', '-1':'L' };
+var KEY_TO_RESP = { 'f':6, 'j':-8, 'l':-1 };
+var OUT_IMG    = { '0':BASE+'happy_fbe.jpg', '1':BASE+'disappoint_fbe.jpg', '2':BASE+'shock_fbe.jpg' };
+
+/* ── Nonsocial stimulus maps ── */
+var BASE_N = 'https://wilderhartwell.github.io/SocIntuitLrn/stim/';
+var SCEN_VIDEO_N = { '0':BASE_N+'Hexagon.mp4', '1':BASE_N+'Diamond.mp4', '2':BASE_N+'Triangle.mp4', '3':BASE_N+'Square.mp4', '4':BASE_N+'Trapezoid.mp4', '5':BASE_N+'Diamond.mp4', '6':BASE_N+'Triangle.mp4' };
+var RESP_IMG_N   = { '6':BASE_N+'Yellow.jpg', '-8':BASE_N+'Red.jpg', '-1':BASE_N+'Blue.jpg' };
+var RESP_LABEL_N = { '6':'Yellow', '-8':'Red', '-1':'Blue' };
+var KEY_MAP_N    = { '6':'F', '-8':'J', '-1':'L' };
+var KEY_TO_RESP_N = { 'f':6, 'j':-8, 'l':-1 };
+var OUT_IMG_N    = { '0':BASE_N+'Polygon_c.jpg', '1':BASE_N+'Polygon_b.jpg', '2':BASE_N+'Polygon_a.jpg' };
+
+/* ── Math helpers ── */
+// Rounds to the nearest integer, with ties (exactly .5) rounding away from
+// zero -- e.g. 1.5 -> 2, -1.5 -> -2, 1.4 -> 1, -1.4 -> -1.
+function roundAwayFromZero(x) {
+  var absX = Math.abs(x);
+  var frac = absX % 1;
+  var rounded = (frac >= 0.5) ? Math.ceil(absX) : Math.floor(absX);
+  return (x < 0) ? -rounded : rounded;
+}
+// Relative move (used for "out"): current index + step, wrapped around the circle.
+function circularMove(arr, idx, delta) {
+  var n = arr.length;
+  var steps = roundAwayFromZero(delta);
+  return ((idx + steps) % n + n) % n;
+}
+// Absolute move (used for "scen"): the raw step is taken directly, from a
+// fixed zero reference, independent of the current index.
+function absoluteMove(arr, delta) {
+  var n = arr.length;
+  var steps = roundAwayFromZero(delta);
+  return ((steps % n) + n) % n;
+}
+
+/* ── State ── */
+var OUT_VALS  = [0, 1, 2];
+var SCEN_VALS = [0, 1, 2, 3, 4, 5, 6];
+var RESP_VALS = [6, -8, -1];
+var outIdx = 0, scenIdx = 0;    // both start at 0
+var stallCount  = 0;            // consecutive rounds where (out,scen) failed to move AT ALL
+var cycle7Count = 0;            // consecutive rounds of returning to the state from 7 trials back
+// Rolling history of the last 7 (outIdx, scenIdx) pairs, oldest first,
+// used by the period-7 nudge below. All start equal to the initial state
+// (there's no real history yet, so trial 0 is treated as the start state).
+var stateHistory = [
+  [outIdx, scenIdx], [outIdx, scenIdx], [outIdx, scenIdx], [outIdx, scenIdx],
+  [outIdx, scenIdx], [outIdx, scenIdx], [outIdx, scenIdx]
+];
+// Scen-only noise: added to the step that picks the NEXT SCENARIO, never
+// to the step that picks the next OUT value -- so it has zero effect on
+// accuracy (every trial still has a key that lands out==0), it only
+// scrambles which scenario comes next so a fixed 3-key response pattern
+// stops reliably staying correct. Tweak the spread/weighting here.
+var SCEN_NOISE_VALS = [-2, -1, 0, 0, 1, 2];
+function scenNoise() {
+  return SCEN_NOISE_VALS[Math.floor(Math.random() * SCEN_NOISE_VALS.length)];
+}
+var trialLog = [];
+
+/* ── Social Stimuli Trial HTML ── */
+function buildTrialHTML(trialNum) {
+
+  var outVal  = OUT_VALS[outIdx];
+  var scenVal = SCEN_VALS[scenIdx];
+
+    // Use blob URL if available, fall back to original URL
+  var scenStim = videoBlobURLs[String(scenVal)] || SCEN_VIDEO[String(scenVal)];
+
+  return `
+  <!-- Goal image overlay -->
+  <img src="${OUT_IMG['0']}" style="
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    width: 115px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    pointer-events: none;
+    z-index: 9999;
+  ">
+
+  <div style="
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:space-between;
+    height:90vh;
+    width:100%;
+  ">
+
+    <!-- VIDEO -->
+
+    <div style="
+      flex:2;
+      display:flex;
+      justify-content:center;
+      width:100%;
+    ">
+      <video
+        autoplay
+        muted
+        playsinline
+        preload="auto"
+        style="width:auto;
+        height:600px;"
+        src="${scenStim}" type="video/mp4"
+      >
+      </video>
+    </div>
+
+    <!-- divider -->
+
+    <div 
+      id="divider-test"
+      style="
+        width:100%;
+        height:3px;
+        background:#444;
+        flex-shrink:0;
+        margin-top:10px;
+    ">
+    </div>
+
+    <!-- response images -->
+
+    <div style="
+      flex:1;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      gap:60px;
+      width:100%;
+    ">
+
+      <div id="resp-card-1">
+        <img src="${RESP_IMG[6]}" style="width:140px;">
+        <p><b>F</b></p>
+      </div>
+
+      <div id="resp-card-2">
+        <img src="${RESP_IMG[-8]}" style="width:140px;">
+        <p><b>J</b></p>
+      </div>
+
+      <div id="resp-card-3">
+        <img src="${RESP_IMG[-1]}" style="width:140px;">
+        <p><b>L</b></p>
+      </div>
+
+    </div>
+
+  </div>
+  `;
+}
+
+function buildTrialOut(trialNum) {
+
+  var outVal  = OUT_VALS[outIdx];
+  var scenVal = SCEN_VALS[scenIdx];
+
+  var outStim = OUT_IMG[String(outVal)];
+  console.log(outStim);
+
+  return `
+  <!-- Goal image overlay -->
+  <img src="${OUT_IMG['0']}" style="
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    width: 115px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    pointer-events: none;
+    z-index: 9999;
+  ">
+
+  <div style="
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:space-between;
+    height:90vh;
+    width:100%;
+  ">
+  <div style="
+      flex:1;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      width:100%;
+    ">
+
+      <div id="out_img">
+        <img src="${outStim}" style="width:500px;">
+      </div>
+  </div>`;
+}
+
+/* ── Nonsocial Stimuli Trial HTML ── */
+function buildTrialHTML_N(trialNum) {
+
+  var outVal  = OUT_VALS[outIdx];
+  var scenVal = SCEN_VALS[scenIdx];
+
+    // Use blob URL if available, fall back to original URL
+  var scenStim_N = videoBlobURLs_N[String(scenVal)] || SCEN_VIDEO_N[String(scenVal)];
+
+  return `
+  <!-- Goal image overlay -->
+  <img src="${OUT_IMG_N['0']}" style="
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    width: 115px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    pointer-events: none;
+    z-index: 9999;
+  ">
+
+  <div style="
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:space-between;
+    height:90vh;
+    width:100%;
+  ">
+
+    <!-- VIDEO -->
+
+    <div style="
+      flex:2;
+      display:flex;
+      justify-content:center;
+      width:100%;
+    ">
+      <video
+        autoplay
+        muted
+        playsinline
+        preload="auto"
+        style="width:auto; height:600px;"
+        src="${scenStim_N}"
+        >
+      </video>
+    </div>
+
+    <!-- divider -->
+
+    <div 
+      id="divider-test"
+      style="
+        width:100%;
+        height:3px;
+        background:#444;
+        flex-shrink:0;
+        margin-top:10px;
+    ">
+    </div>
+
+    <!-- response images -->
+
+    <div style="
+      flex:1;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      gap:60px;
+      width:100%;
+    ">
+
+      <div id="resp-card-1">
+        <img src="${RESP_IMG_N[6]}" style="width:160px;">
+        <p><b>F</b></p>
+      </div>
+
+      <div id="resp-card-2">
+        <img src="${RESP_IMG_N[-8]}" style="width:160px;">
+        <p><b>J</b></p>
+      </div>
+
+      <div id="resp-card-3">
+        <img src="${RESP_IMG_N[-1]}" style="width:160px;">
+        <p><b>L</b></p>
+      </div>
+
+    </div>
+
+  </div>
+  `;
+}
+
+function buildTrialOut_N(trialNum) {
+
+  var outVal  = OUT_VALS[outIdx];
+  var scenVal = SCEN_VALS[scenIdx];
+
+  var outStim_N = OUT_IMG_N[String(outVal)];
+  console.log(outStim_N);
+
+  return `
+  <!-- Goal image overlay -->
+  <img src="${OUT_IMG_N['0']}" style="
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    width: 115px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    pointer-events: none;
+    z-index: 9999;
+  ">
+
+  <div style="
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:space-between;
+    height:90vh;
+    width:100%;
+  ">
+  <div style="
+      flex:1;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      width:100%;
+    ">
+
+      <div id="out_img">
+        <img src="${outStim_N}" style="width:500px;">
+      </div>
+  </div>`;
+}
+
+/* ── jsPsych init ── */
+var jsPsych = initJsPsych(
+//  {
+//  on_finish: function() {
+//    jsPsych.data.get().localSave('csv', 'Abbie_data.csv');
+//  }
+//}
+);
+
+// Preload images and videos
+
+// Combine all images from both social and nonsocial sets
+var allImages = Array.from(new Set(
+  Object.values(RESP_IMG)
+    .concat(Object.values(OUT_IMG))
+    .concat(Object.values(RESP_IMG_N))
+    .concat(Object.values(OUT_IMG_N))
+));
+
+var videoBlobURLs = {};
+var videoBlobURLs_N = {};
+
+var preload = {
+  type: jsPsychPreload,
+  images: allImages,
+  video: [],
+  on_start: function() {
+    // Fetch social videos
+    var socialFetches = Object.entries(SCEN_VIDEO).map(function([key, url]) {
+      return fetch(url)
+        .then(function(r) { return r.blob(); })
+        .then(function(blob) {
+          videoBlobURLs[key] = URL.createObjectURL(blob);
+          console.log('Social blob ready for scen', key);
+        })
+        .catch(function(err) {
+          console.warn('Social blob fetch failed for scen', key, err);
+        });
+    });
+
+    // Fetch nonsocial videos
+    var nonsocialFetches = Object.entries(SCEN_VIDEO_N).map(function([key, url]) {
+      return fetch(url)
+        .then(function(r) { return r.blob(); })
+        .then(function(blob) {
+          videoBlobURLs_N[key] = URL.createObjectURL(blob);
+          console.log('Nonsocial blob ready for scen', key);
+        })
+        .catch(function(err) {
+          console.warn('Nonsocial blob fetch failed for scen', key, err);
+        });
+    });
+
+    return Promise.all(socialFetches.concat(nonsocialFetches));
+  },
+  on_success: function(file) {
+    console.log('Image preloaded:', file);
+  },
+  on_error: function(file) {
+    console.warn('Image preload FAILED:', file);
+  },
+  on_finish: function(data) {
+    console.log('Preload trial finished:', data);
+    console.log('Social blob URLs ready:', Object.keys(videoBlobURLs));
+    console.log('Nonsocial blob URLs ready:', Object.keys(videoBlobURLs_N));
+  }
+};
+// TEMPORARY DIAGNOSTIC: records whether keyboard responses were received regardless of whether they were one of the required keys.
+document.addEventListener(
+  'keydown',
+  function(event) {
+    console.log(
+      '[KEYBOARD DIAGNOSTIC]',
+      'key:', event.key,
+      'time:', Math.round(performance.now()),
+      'active element:', document.activeElement?.tagName
+    );
+  },
+  true
+);
+var timeline = []; // create timeline
+//timeline.push({ type: jsPsychPreload, images: allImages, video: allVideos });
+timeline.push(preload);
+
+var consent = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus:`
+              <div style="
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    ">
+      <div style="
+        max-width: 800px;
+        margin: 0 auto;
+        text-align: left;
+      ">
+              <h3>Exempt Information Sheet</h3>
+              <p>You are being invited to participate in a research study titled Social Learning. This study is being done by Dr. Leslie Carver and Wilder Hartwell from UC San Diego. You were selected to participate in this study because you are an adult 18 years or older with or without autism spectrum disorder.</p>
+              <p>The purpose of this research study is to obtain greater knowledge about social and nonsocial learning. Your participation in this research should last approximately 50 - 70 minutes. If you agree to take part in this study, you will be asked to complete a task on the computer that will involve responding to cues to get a desired outcome.</p>
+              <p>Your participation in this study is completely voluntary and you can withdraw at any time. Choosing not to participate or withdrawing will result in no penalty or loss of benefits to which you are entitled. You are free to skip any question that you choose.</p>
+              <p>If you have questions about this project or if you have a research-related problem, you may contact the researcher, Leslie Carver at 858-757-4513. If you have any questions concerning your rights as a research subject, you may contact the UC San Diego Office of IRB Administration at irb@ucsd.edu or 858-246-4777.</p>
+              <p>By participating in this research you are indicating that you are at least 18 years old, have read this consent form, and agree to participate in this research study. Please keep this consent form for your records.</p>
+              <p>If you agree to participate, press the enter key to continue. If you no longer want to participate, please close the webpage.</p>
+              </div>
+            </div>`,
+ post_trial_gap: 1000,
+ choices: ['Enter']
+};
+
+
+
+var welcome = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `<div style="
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      max-width: 1000px;
+      margin: 0 auto;
+    ">
+               <h2>Welcome to the experiment</h2>
+               <p>Press the enter key to begin.</p>
+               </div>`,
+    post_trial_gap: 1000,
+    choices: ['Enter']
+
+};
+
+function makeProgressBar(currentQ, totalQ, numQuestionsInThisSurvey) {
+  return function() {
+    var totalQuestions = 4 + 16 + 12 + 32;
+    var questionsBefore = [0, 4, 20, 32];
+    var doneCount = questionsBefore[currentQ - 1];
+
+    var bar = document.createElement('div');
+    bar.id = 'survey-progress';
+    bar.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 9999;
+      background: #f0f0f0;
+      padding: 8px 20px;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    `;
+
+    function updateBar(answeredInThisSurvey) {
+      var totalAnswered = doneCount + answeredInThisSurvey;
+      var pct = Math.round((totalAnswered / totalQuestions) * 100);
+      bar.innerHTML = `
+        <span style="font-size:13px;color:#555;white-space:nowrap;">
+          Survey ${currentQ} of ${totalQ}
+        </span>
+        <div style="flex:1;background:#ddd;border-radius:999px;height:10px;">
+          <div style="width:${pct}%;background:#5a7fdb;height:10px;border-radius:999px;transition:width 0.3s;"></div>
+        </div>
+        <span style="font-size:13px;color:#555;white-space:nowrap;">${pct}% complete</span>
+      `;
+    }
+
+    updateBar(0);
+
+    // Remove any existing bar before appending new one
+    document.querySelectorAll('#survey-progress').forEach(function(el) {
+      el.remove();
+    });
+    document.body.appendChild(bar);
+
+  // Add survey top margin to make room for progress bar
+  setTimeout(function() {
+  var preamble = document.querySelector('.jspsych-survey-multi-choice-preamble');
+  console.log('preamble found:', preamble);
+  if (preamble) preamble.style.marginTop = '50px';
+  }, 50);
+
+
+    function countAnswered() {
+      var answered = document.querySelectorAll('.jspsych-survey-multi-choice-question input[type="radio"]:checked');
+      var answeredNames = new Set();
+      answered.forEach(function(radio) {
+        answeredNames.add(radio.name);
+      });
+      updateBar(answeredNames.size);
+    }
+
+    var surveyContainer = document.querySelector('.jspsych-content');
+    if (surveyContainer) {
+      surveyContainer.addEventListener('change', countAnswered);
+    }
+  };
+}
+
+function removeProgressBar() {
+  document.querySelectorAll('#survey-progress').forEach(function(el) {
+    el.remove();
+  });
+  var preamble = document.querySelector('.jspsych-survey-multi-choice-preamble');
+  if (preamble) preamble.style.marginTop = '';
+  console.log('removeProgressBar called, bars remaining:', document.querySelectorAll('#survey-progress').length);
+}
+
+
+// Demographic questions 
+var demographics = {
+    type: jsPsychSurveyMultiChoice,
+    on_load: makeProgressBar(1, 4, 4),
+    preamble: `<p><h3>Please answer the following demographic questions. Your answers will not affect your ability to participate.</h3></p>`,
+    questions: [
+      {
+        prompt: "What is your age?",
+        name: "age",
+        options: ["18-24", "25-34", "35-44", "45-54", "55-64", "65+", "Prefer not to say"],
+        required: true
+      },
+      {
+        prompt: "What is your gender?",
+        name: "gender",
+        options: ["Man", "Woman", "Genderqueer", "Prefer not to say"],
+        required: true
+      },
+      {
+        prompt: "What is your race?",
+        name: "race",
+        options: ["White", "Black or African American", "Asian", "Hispanic or Latino", "Native American or Alaska Native", "Native Hawaiian or Other Pacific Islander", "Mixed Race", "Other", "Prefer not to say"],
+        required: true
+      },
+      {
+        prompt: "Do you have an official autism spectrum disorder diagnosis from a licensed clincian (psychiatrist, psychologist, or neuropsychologist)?",
+        name: "autism",
+        options: ["Yes", "No", "Prefer not to say"],
+        required: true
+      }
+    ]};
+
+
+var SRS = {
+  type: jsPsychSurveyMultiChoice,
+  on_load: makeProgressBar(2, 4, 16),
+  preamble: `<p>Now you will fill out three short questionnaires. Please answer this short survey (1/3):</p> <p><b> How true is the following statement for you?</b></p>`,
+  questions: [  
+    { name: 'SRS1', prompt: "When under stress, I engage in rigid or inflexible patterns of behavior that seem odd to people.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true },
+    { name: 'SRS2', prompt: "I am usually aware of how others are feeling.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS3', prompt: "I behave in ways that seem strange or bizarre to others.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS4', prompt: "I am awkward in turn-taking interactions with others (for example, I have a hard time keeping up with the give-and-take of a conversation).", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS5', prompt: "I avoid eye contact or am told that I have unusal eye contact.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS6', prompt: "I have sensory interests that others find unusual (for example, smelling or looking at things in a special way).", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS7', prompt: "I interact appropriately with other adults.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS8', prompt: "I do not join group activities or social events unless prompted or strongly urged to do so.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS9', prompt: "I am regarded by others as odd or weird.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS10', prompt: "I become upset in situations with lots of things going on.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS11', prompt: "My behavior is socially awkward, even when I am trying to be polite.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS12', prompt: "I have difficulty relating to adults outside of my family.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS13', prompt: "I respond appropriately to mood changes in others (for example, when a friend's mood changes from happy to sad).", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS14', prompt: "People think I am interested in too few topics, or that I get too carried away with those topics.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS15', prompt: "I am overly sensitive to certain sounds, textures, or smells.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  },
+    { name: 'SRS16', prompt: "I tend to think about people in the same way that I do objects.", options: ['Almost Always True', 'Often True', 'Sometimes True', 'Not True'], required: true  }
+  ],
+  }
+var IUS = {
+  type: jsPsychSurveyMultiChoice,
+  on_load: makeProgressBar(3, 4, 12),
+  preamble: `<p>Please answer this short survey (2/3): </p> <p><b> How characteristic is the follow statement of you?</b>`,
+  questions: [
+    {
+      name: 'IUS1',
+      prompt: "Unforseen events upset me greatly.",
+      options: ['entirely characteristic of me', 'mostly characteristic of me', 'moderately characteristic of me', 'slightly characteristic of me', 'not at all characteristic of me'],
+      required: true,
+    },
+    {
+      name: 'IUS2',
+      prompt: 'It frustrates me not having all of the information I need.',
+      options: ['entirely characteristic of me', 'mostly characteristic of me', 'moderately characteristic of me', 'slightly characteristic of me', 'not at all characteristic of me'],
+      required: true
+    },
+    {
+      name: 'IUS3',
+      prompt: 'One should always look ahead so as to avoid surprises.',
+      options: ['entirely characteristic of me', 'mostly characteristic of me', 'moderately characteristic of me', 'slightly characteristic of me', 'not at all characteristic of me'],
+      required: true
+    },
+    {
+      name: 'IUS4',
+      prompt: 'A small, unforeseen event can spoil everything, even with the best of planning.',
+      options: ['entirely characteristic of me', 'mostly characteristic of me', 'moderately characteristic of me', 'slightly characteristic of me', 'not at all characteristic of me'],
+      required: true
+    },
+    {
+      name: 'IUS5',
+      prompt: 'I always want to know what the future has in store for me.',
+      options: ['entirely characteristic of me', 'mostly characteristic of me', 'moderately characteristic of me', 'slightly characteristic of me', 'not at all characteristic of me'],
+      required: true
+    },
+    {
+      name: 'IUS6',
+      prompt: `I can't stand being taken by surprise.`,
+      options: ['entirely characteristic of me', 'mostly characteristic of me', 'moderately characteristic of me', 'slightly characteristic of me', 'not at all characteristic of me'],
+      required: true
+    },
+    {
+      name: 'IUS7',
+      prompt: 'I should be able to organize everything in advance.',
+      options: ['entirely characteristic of me', 'mostly characteristic of me', 'moderately characteristic of me', 'slightly characteristic of me', 'not at all characteristic of me'],
+      required: true
+    },
+    {
+      name: 'IUS8',
+      prompt: 'Uncertainty keeps me from living a full life.',
+      options: ['entirely characteristic of me', 'mostly characteristic of me', 'moderately characteristic of me', 'slightly characteristic of me', 'not at all characteristic of me'],
+      required: true
+    },
+    {
+      name: 'IUS9',
+      prompt: `When it's time to act, uncertainty paralyses me.`,
+      options: ['entirely characteristic of me', 'mostly characteristic of me', 'moderately characteristic of me', 'slightly characteristic of me', 'not at all characteristic of me'],
+      required: true
+    },
+    {
+      name: 'IUS10',
+      prompt: `When I am uncertain I can't function very well.`,
+      options: ['entirely characteristic of me', 'mostly characteristic of me', 'moderately characteristic of me', 'slightly characteristic of me', 'not at all characteristic of me'],
+      required: true
+    },
+    {
+      name: 'IUS11',
+      prompt: `The smallest doubt can stop me from acting.`,
+      options: ['entirely characteristic of me', 'mostly characteristic of me', 'moderately characteristic of me', 'slightly characteristic of me', 'not at all characteristic of me'],
+      required: true
+    },
+    {
+      name: 'IUS12',
+      prompt: `I must get away from all uncertain situations.`,
+      options: ['entirely characteristic of me', 'mostly characteristic of me', 'moderately characteristic of me', 'slightly characteristic of me', 'not at all characteristic of me'],
+      required: true
+    }
+  ]
+};
+
+var USID = {
+  type: jsPsychSurveyMultiChoice,
+  on_load: makeProgressBar(4, 4, 32),
+  on_finish: removeProgressBar,
+  preamble: `<p>Please answer this short survey (3/3): </p> <p><b> How much do you agree with the following statement?</b>`,
+  randomize_question_order: true,
+  questions: [
+    {
+      name: 'USIDia1',
+      prompt: `When I make a decision, it is more important for me to feel the decision is right than to have a rational reason for it.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDia2',
+      prompt: `When I make a decision, I trust my inner feeling and reactions.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDia3',
+      prompt: `With most decisions it makes sense to completely rely on your feelings.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDia4',
+      prompt: `I prefer drawing conclusions based on my feelings, my knowledge of human nature, and my experience of life.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDia5',
+      prompt: `Using my gut feelings usually works well for me in figuring out problems in my life.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDia6',
+      prompt: `I believe in trusting my hunches.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDia7',
+      prompt: `I hardly ever go wrong when I listen to my deepest gut feelings to find an answer.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDia8',
+      prompt: `I tend to use my heart as a guide for my actions.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDis9',
+      prompt: `I generally make snap decisions.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDis10',
+      prompt: `I make quick decisions.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDis11',
+      prompt: `I am often aware of how to decide even before I review all aspects.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDis12',
+      prompt: `I've had enough experience to just know what I need to do most of the time without trying to figure it out every time.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDis13',
+      prompt: `The right way to decide usually comes to mind almost immediately.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDis14',
+      prompt: `I typically figure out the way to decide swiftly.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDis15',
+      prompt: `I quickly do the right thing when deciding because I've often faced almost the same thing before.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDis16',
+      prompt: `I rarely need to mull things over; how to decide usually becomes quickly apparent.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdp17',
+      prompt: `Developing a clear plan is very important to me.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdp18',
+      prompt: `I like detailed action plans.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdp19',
+      prompt: `I prefer well-prepared meetings with a clear agenda and strict time management.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdp20',
+      prompt: `I make definite engagements, and I follow up meticulously.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdp21',
+      prompt: `When I make decisions, I proceed step-by-step.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdp22',
+      prompt: `Before making decisions I usually think about the goals I want to achieve.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdp23',
+      prompt: `I prefer making detailed plans rather than leaving things to chance.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdp24',
+      prompt: `I usually have clear, explainable reasons for my decisions.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdk25',
+      prompt: `I want to have a full understanding of all problems.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdk26',
+      prompt: `I like to analyze problems.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdk27',
+      prompt: `I study every problem until I understand the underlying logic.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdk28',
+      prompt: `I have no problem thinking things through carefully.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdk29',
+      prompt: `I enjoy intellectual challenges.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdk30',
+      prompt: `I enjoy solving problems that require hard thinking.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdk31',
+      prompt: `I prefer complex problems to simple problems.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+    {
+      name: 'USIDdk32',
+      prompt: `I enjoy thinking in abstract terms.`,
+      options: ["I completely agree", "I mostly agree", "I moderately agree", "I slightly agree", "I don't agree"],
+      required: true
+    },
+  ]
+};
+
+var social_instructions = {
+  type: jsPsychHtmlKeyboardResponse,
+  on_load: function() { removeProgressBar(); },
+  stimulus: `
+    <div style="
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      max-width: 1000px;
+      margin: 0 auto;
+    ">
+      <p><b>Instructions</b></p>
+      <p style="margin-left: 10px; margin-right: 10px;">On your screen, you will see a person approaching you. Below that, you will see three pictures of facial expressions with their associated keys. 
+        Using the <b>F</b>, <b>J</b>, and <b>L</b> keys, choose the one that you think will make the person approaching you <b>smile</b>. The goal feedback is shown below and will be in the upper-right corner during the task.</p>
+        <p><img src="${OUT_IMG[0]}" style="width:200px;"></p>
+        <p>The correct response to each approach may differ across trials. It's ok if you feel like you're guessing. It may be difficult in the beginning, but don't give up. You will only have until the end of the approach to respond. You will see the person's feedback after you respond. The person's feedback may not be what you would expect in real life. </p>
+        <p>You will get a break halfway through the task.</p>
+        <p>Press <b>enter</b> to begin the <b>practice trials</b>.</p>
+    </div>`,
+  post_trial_gap: 2000,
+  choices: ['Enter']
+};
+
+var nonsocial_instructions = {
+  type: jsPsychHtmlKeyboardResponse,
+  on_load: function() { removeProgressBar(); },
+  stimulus: `
+    <div style="
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      max-width: 1000px;
+      margin: 0 auto;
+    ">
+      <p><b>Instructions</b></p>
+      <p style="margin-left: 10px; margin-right: 10px;">On your screen, you will see a shape getting closer to you. Below that, you will see three colors with their associated keys. Using the <b>F</b>, <b>J</b>, and <b>L</b> keys, 
+        choose the color that you think will make the shape transform into the <b>star-like polygon</b>. The goal polygon is shown below and will be in the upper-right corner during the task.</p>
+        <p><img src="${OUT_IMG_N[0]}" style="width:200px;"></p>
+        <p>The correct response to each shape may differ across trials. It's ok if you feel like you're guessing. It may be difficult in the beginning, but don't give up. You will only have until the end of the approach to respond. You will see the feedback polygon after you respond. </p>  
+        <p>You will get a break halfway through the task.</p>
+      <p>Press <b>enter</b> to begin the <b>practice trials</b>.</p>
+    </div>`,
+  post_trial_gap: 2000,
+  choices: ['Enter']
+};
+
+let SocTrial = [];
+
+/* Run Social trials */
+SocTrial.push({
+    timeline: [
+    {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: function() {
+      return buildTrialHTML(
+        jsPsych.data.get().filter({task: 'response'}).count() + 1
+      );
+    },
+
+    choices: ['f','j','l'],
+    response_ends_trial: true,
+    trial_duration: 3000,
+    post_trial_gap: 250,
+
+  on_finish: function(data) {
+  var key = data.response;
+  var resp;
+
+  if (key === null) {
+    resp = RESP_VALS[Math.floor(Math.random() * RESP_VALS.length)];
+    data.timed_out = true;
+  } else {
+    // Normalize FIRST before anything else
+    if (typeof key === 'number') {
+      key = jsPsych.pluginAPI.convertKeyCodeToKeyCharacter(key);
+    }
+    if (typeof key === 'string') {
+      key = key.toLowerCase();
+    }
+    // Now update data.response and look up resp with the normalized key
+    data.response = key;
+    resp = KEY_TO_RESP[key];
+    data.timed_out = false;
+  }
+  console.log("resp number =", resp)
+  console.log("resp key =", data.response)
+
+      var outVal  = OUT_VALS[outIdx];
+      var scenVal = SCEN_VALS[scenIdx];
+
+      // Clean (noiseless) step drives OUT; correctness (out==0) is never
+      // touched by the scen-only noise added below. scen gets the SAME
+      // base step plus a random jitter, used only to pick the next
+      // scenario -- so the noise can't affect accuracy, only which
+      // scenario comes next.
+      var step      = outVal + (scenVal - resp);
+      var newOutIdx = circularMove(OUT_VALS, outIdx, step);
+
+      var noise      = scenNoise();
+      var stepScen   = step + noise;
+      var newScenIdx = absoluteMove(SCEN_VALS, stepScen);
+
+      var nudged = false;
+      var nudgeType = null;
+
+      // 3a. Period-1 lockup: nudge once the FULL state has failed to move
+      //     at all for 3 consecutive trials (a true fixed point).
+      if (newOutIdx === outIdx && newScenIdx === scenIdx) {
+        stallCount++;
+      } else {
+        stallCount = 0;
+      }
+      if (stallCount >= 3) {
+        nudged = true;
+        nudgeType = 'lockup';
+        var otherScenIdxs = SCEN_VALS.map(function(v, i) { return i; }).filter(function(i) { return i !== scenIdx; });
+        newScenIdx = otherScenIdxs[Math.floor(Math.random() * otherScenIdxs.length)];
+        stallCount = 0;
+        cycle7Count = 0;
+      }
+
+      // 3b. Period-7 cycle: catches the one residual always-correct-
+      //     forever exploit this design has -- a full 7-scenario loop.
+      //     Nudge once the new state matches the state from 7 trials
+      //     back, twice in a row.
+      if (!nudged) {
+        var sevenBack = stateHistory[0];
+        if (newOutIdx === sevenBack[0] && newScenIdx === sevenBack[1]) {
+          cycle7Count++;
+        } else {
+          cycle7Count = 0;
+        }
+        if (cycle7Count >= 2) {
+          nudged = true;
+          nudgeType = 'cycle7';
+          var otherScenIdxs2 = SCEN_VALS.map(function(v, i) { return i; }).filter(function(i) { return i !== scenIdx; });
+          newScenIdx = otherScenIdxs2[Math.floor(Math.random() * otherScenIdxs2.length)];
+          cycle7Count = 0;
+          stallCount = 0;
+        }
+      }
+
+      outIdx  = newOutIdx;
+      scenIdx = newScenIdx;
+
+      data.resp        = resp;
+      data.correct     = (OUT_VALS[newOutIdx] === 0) ? 1 : 0;
+      data.currentOut  = outVal;
+      data.currentScen = scenVal;
+      data.step        = step;
+      data.scenNoise   = noise;
+      data.stepScen    = stepScen;
+      data.nextOut     = OUT_VALS[newOutIdx];
+      data.nextScen    = SCEN_VALS[newScenIdx];
+      data.stallCount  = stallCount;
+      data.cycle7Count = cycle7Count;
+      data.nudged      = nudged;
+      data.nudgeType   = nudgeType;
+      data.scenStim   = SCEN_VIDEO[String(scenVal)].split('/').pop();
+      data.respStim   = RESP_IMG[resp].split('/').pop();
+      data.outStim    = OUT_IMG[String(outVal)].split('/').pop();
+      data.trialNum   = jsPsych.data.get().filter({task: 'response'}).count(); // No +1 here because by the time on_finish runs, the current trial is already counted
+
+      // Slide the 7-trial history window for the period-7 nudge above.
+      stateHistory = stateHistory.slice(1).concat([[outIdx, scenIdx]]);
+    },
+
+    data: {
+      task: 'response'
+    }
+    },
+    {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: function() {
+      return buildTrialOut(
+        jsPsych.data.get().filter({task: 'outcome'}).count() + 1
+      );
+    },
+    trial_duration: 1500,
+    post_trial_gap: 250,
+    choices: "NO_KEYS",
+    data: {
+      task: 'outcome'
+      }
+    },
+  ]
+})
+
+let NonsocTrial = [];
+
+/* Run Social trials */
+NonsocTrial.push({
+    timeline: [
+    {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: function() {
+      return buildTrialHTML_N(
+        jsPsych.data.get().filter({task: 'response_N'}).count() + 1
+      );
+    },
+
+    choices: ['f','j','l'],
+    response_ends_trial: true,
+    trial_duration: 3000,
+    post_trial_gap: 250,
+
+          
+    on_finish: function(data) {
+  var key = data.response;
+  var resp;
+
+  if (key === null) {
+    resp = RESP_VALS[Math.floor(Math.random() * RESP_VALS.length)];
+    data.timed_out = true;
+  } else {
+    // Normalize FIRST before anything else
+    if (typeof key === 'number') {
+      key = jsPsych.pluginAPI.convertKeyCodeToKeyCharacter(key);
+    }
+    if (typeof key === 'string') {
+      key = key.toLowerCase();
+    }
+    // Now update data.response and look up resp with the normalized key
+    data.response = key;
+    resp = KEY_TO_RESP[key];
+    data.timed_out = false;
+  }
+  console.log("resp number =", resp)
+  console.log("resp key =", data.response)
+
+      var outVal  = OUT_VALS[outIdx];
+      var scenVal = SCEN_VALS[scenIdx];
+
+      // Clean (noiseless) step drives OUT; correctness (out==0) is never
+      // touched by the scen-only noise added below. scen gets the SAME
+      // base step plus a random jitter, used only to pick the next
+      // scenario -- so the noise can't affect accuracy, only which
+      // scenario comes next.
+      var step      = outVal + (scenVal - resp);
+      var newOutIdx = circularMove(OUT_VALS, outIdx, step);
+
+      var noise      = scenNoise();
+      var stepScen   = step + noise;
+      var newScenIdx = absoluteMove(SCEN_VALS, stepScen);
+
+      var nudged = false;
+      var nudgeType = null;
+
+      // 3a. Period-1 lockup: nudge once the FULL state has failed to move
+      //     at all for 3 consecutive trials (a true fixed point).
+      if (newOutIdx === outIdx && newScenIdx === scenIdx) {
+        stallCount++;
+      } else {
+        stallCount = 0;
+      }
+      if (stallCount >= 3) {
+        nudged = true;
+        nudgeType = 'lockup';
+        var otherScenIdxs = SCEN_VALS.map(function(v, i) { return i; }).filter(function(i) { return i !== scenIdx; });
+        newScenIdx = otherScenIdxs[Math.floor(Math.random() * otherScenIdxs.length)];
+        stallCount = 0;
+        cycle7Count = 0;
+      }
+
+      // 3b. Period-7 cycle: catches the one residual always-correct-
+      //     forever exploit this design has -- a full 7-scenario loop.
+      //     Nudge once the new state matches the state from 7 trials
+      //     back, twice in a row.
+      if (!nudged) {
+        var sevenBack = stateHistory[0];
+        if (newOutIdx === sevenBack[0] && newScenIdx === sevenBack[1]) {
+          cycle7Count++;
+        } else {
+          cycle7Count = 0;
+        }
+        if (cycle7Count >= 2) {
+          nudged = true;
+          nudgeType = 'cycle7';
+          var otherScenIdxs2 = SCEN_VALS.map(function(v, i) { return i; }).filter(function(i) { return i !== scenIdx; });
+          newScenIdx = otherScenIdxs2[Math.floor(Math.random() * otherScenIdxs2.length)];
+          cycle7Count = 0;
+          stallCount = 0;
+        }
+      }
+
+      outIdx  = newOutIdx;
+      scenIdx = newScenIdx;
+
+      data.resp        = resp;
+      data.correct     = (OUT_VALS[newOutIdx] === 0) ? 1 : 0;
+      data.currentOut  = outVal;
+      data.currentScen = scenVal;
+      data.step        = step;
+      data.scenNoise   = noise;
+      data.stepScen    = stepScen;
+      data.nextOut     = OUT_VALS[newOutIdx];
+      data.nextScen    = SCEN_VALS[newScenIdx];
+      data.stallCount  = stallCount;
+      data.cycle7Count = cycle7Count;
+      data.nudged      = nudged;
+      data.nudgeType   = nudgeType;
+      data.scenStim   = SCEN_VIDEO_N[String(scenVal)].split('/').pop();
+      data.respStim   = RESP_IMG_N[resp].split('/').pop();
+      data.outStim    = OUT_IMG_N[String(outVal)].split('/').pop();
+      data.trialNum   = jsPsych.data.get().filter({task: 'response_N'}).count(); // No +1 here because by the time on_finish runs, the current trial is already counted
+
+      // Slide the 7-trial history window for the period-7 nudge above.
+      stateHistory = stateHistory.slice(1).concat([[outIdx, scenIdx]]);
+    },
+
+    data: {
+      task: 'response_N'
+    }
+    },
+    {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: function() {
+      return buildTrialOut_N(
+        jsPsych.data.get().filter({task: 'outcome_N'}).count() + 1
+      );
+    },
+    trial_duration: 1500,
+    post_trial_gap: 250,
+    choices: "NO_KEYS",
+    data: {
+      task: 'outcome_N'
+      }
+    },
+  ]
+})
+var MainTaskStart = {
+  type: jsPsychHtmlKeyboardResponse,
+    stimulus: `<div style="
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      max-width: 1000px;
+      margin: 0 auto;
+      ">
+      <p><h3>PRACTICE COMPLETE</h3> </p>
+      <p>Now you will start the real task.</p>
+      <p>Press <b>enter</b> to continue.</p>
+        </div>`,
+    post_trial_gap: 1000,
+    choices: ['Enter']
+};
+
+var ShortBreakTrial = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `<div style="
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      max-width: 1000px;
+      margin: 0 auto;
+      ">
+      <p>Good job! You can take a short break now.</p>
+      <p>Press <b>enter</b> when you're ready to continue.</p>
+        </div>`,
+    post_trial_gap: 1000,
+    choices: ['Enter']
+};
+
+var LongBreakTrial = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `<div style="
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      max-width: 1000px;
+      margin: 0 auto;
+      ">
+      <p>Good job! You have completed half of the experiment! Now you're going to do a different task.</p>
+      <p>You can take a break now.</p>
+      <p>Press <b>enter</b> when you're ready to continue.</p>
+      </div>`,
+    post_trial_gap: 1000,
+    choices: ['Enter']
+};
+
+function postTestOnLoad() {
+  var content = document.querySelector('.jspsych-content');
+  if (content) {
+    content.style.maxWidth = '800px';
+    content.style.margin = '0 auto';
+    content.style.padding = '0 40px';
+  }
+}
+  
+var MechPostTest = {
+  type: jsPsychSurveyText,
+  on_load: postTestOnLoad,
+  preamble: `Reflect on the experiment and answer the following questions to the best of your ability. Please give as detailed of a response as you can. It's ok if you feel uncertain about your answer.`,
+  button_label: `Next Questions`,
+  questions: [
+    {
+      prompt: 'On the <span style="color: blue; font-weight: bold;">shapes</span> task, how does the experiment determine what feedback you get?',
+      name: "nonsocMech", 
+      rows: 6,
+      required: true
+    },
+    {
+      prompt: `<p>On the <span style="color: blue; font-weight: bold;">people </span> task, how does the experiment determine what feedback you get?</p>`,
+      name: "socMech", 
+      rows: 6,
+      required: true
+    },
+  ]
+}; 
+  
+var confidenceScale = [
+  "1",
+  "2",
+  "3",
+  "4",
+  "5"
+];
+
+var MechConfTest = {
+  type: jsPsychSurveyLikert,
+  on_load: postTestOnLoad,
+  preamble: `Rate your confidence about your answers to the two previous questions.`,
+  questions: [
+{
+      prompt: `On a scale of 1-5, how confident are you about your answer to the <span style="color: blue; font-weight: bold;">shapes</span> question?`,
+      name: "nonsocConfidenceMech",
+      labels: confidenceScale,
+      required: true
+    },
+    {
+      prompt: `On a scale of 1-5, how confident are you about your answer to the <span style="color: blue; font-weight: bold;">people </span> question?`,
+      name: "socConfidenceMech",
+      labels: confidenceScale,
+      required: true
+      }
+    ]
+  }
+
+var likert_scale = [
+  "Never", 
+  "Rarely", 
+  "Sometimes", 
+  "Often", 
+  "Always"
+];
+
+var socFreqTest = {
+  type: jsPsychSurveyLikert,
+  on_load: postTestOnLoad,
+  preamble: `<p>Reflect on the <span style="color: blue; font-weight: bold;">people </span> task and answer the following questions to the best of your ability.</p>`,
+  questions: [
+    {
+      prompt: "How often did you feel like you were guessing on the people task?", 
+      name: 'socFreqGuess', 
+      labels: likert_scale,
+      required: true
+    },
+    {
+      prompt: "How often did you get the outcome you expected on the people task?",
+      name: 'socFreqExpect', 
+      labels: likert_scale,
+      required: true
+    },
+  ],
+};
+
+var nonsocFreqTest = {
+  type: jsPsychSurveyLikert,
+  on_load: postTestOnLoad,
+  preamble: `Reflect on the <span style="color: blue; font-weight: bold;">shapes</span> task and answer the following questions to the best of your ability.`,
+  questions: [
+    {
+      prompt: "How often did you feel like you were guessing on the shapes task?", 
+      name: 'nonsocFreqGuess', 
+      labels: likert_scale,
+      required: true
+    },
+    {
+      prompt: "How often did you get the outcome you expected on the shapes task?", 
+      name: 'nonsocFreqExpect', 
+      labels: likert_scale,
+      required: true
+    },
+  ],
+};
+
+const filename = `${prolific_pid || 'test_' + Date.now()}.csv`;
+
+var save_data = {
+  type: jsPsychPipe,
+  action: "save",
+  experiment_id: "xyHIGnWzpPuY",
+  filename: filename,
+  data_string: ()=>jsPsych.data.get().csv()
+};
+
+var ProlificCode = {
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: `
+    <div style="
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    ">
+      <div style="
+        max-width: 1000px;
+        margin: 0 auto;
+        text-align: center;
+      ">
+        <p><h2> Thank you for piloting the experiment! You can close the page now.</h2></p>
+        <p>Thank you for participating in this experiment!</p>
+        <p>Your Prolific completion code is: </p>
+        <p>Your Prolific redirection link is: </p>
+        <p>You may close this page once you have what you need.</p>
+      </div>
+    </div>`,
+  post_trial_gap: 1000,
+  choices: "NO_KEYS"
+};
+// Psuedorandomization using odd and even last numbers in prolific_pid
+let socialFirst;
+
+if (prolific_pid) {
+  // Simple hash: sum of character codes
+  let hash = 0;
+  for (let i = 0; i < prolific_pid.length; i++) {
+    hash += prolific_pid.charCodeAt(i);
+  }
+  socialFirst = (hash % 2 === 0);
+} else {
+  // Fallback if no prolific_pid
+  socialFirst = (Math.random() < 0.5);
+}
+console.log("socialFirst =", socialFirst);
+
+jsPsych.data.addProperties({
+  ID: prolific_pid,
+  socialFirst: socialFirst
+});
+
+timeline.push(consent);
+timeline.push(welcome);
+timeline.push(demographics);
+timeline.push(SRS);
+timeline.push(IUS);
+timeline.push(USID);
+
+if (socialFirst) {
+  timeline.push(social_instructions);
+  timeline.push({
+    timeline: [...SocTrial],
+    repetitions: 5
+  });
+  timeline.push(MainTaskStart);
+  timeline.push({
+    timeline: [...SocTrial],
+    repetitions: 100
+  });
+  timeline.push(ShortBreakTrial);
+  timeline.push({
+    timeline: [...SocTrial],
+    repetitions: 100
+  });
+
+  timeline.push(LongBreakTrial)
+
+  timeline.push(nonsocial_instructions);
+  timeline.push({
+    timeline: [...NonsocTrial],
+    repetitions: 5
+  });
+  timeline.push(MainTaskStart);
+  timeline.push({
+    timeline: [...NonsocTrial],
+    repetitions: 100
+  });
+  timeline.push(ShortBreakTrial);
+  timeline.push({
+    timeline: [...NonsocTrial],
+    repetitions: 100
+  }); 
+
+} else {
+  timeline.push(nonsocial_instructions);
+  timeline.push({
+    timeline: [...NonsocTrial],
+    repetitions: 5
+  });
+  timeline.push(MainTaskStart);
+  timeline.push({
+    timeline: [...NonsocTrial],
+    repetitions: 100
+  }); 
+  timeline.push(ShortBreakTrial);
+  timeline.push({
+    timeline: [...NonsocTrial],
+    repetitions: 100
+  }); 
+
+  timeline.push(LongBreakTrial)
+
+  timeline.push(social_instructions);
+  timeline.push({
+    timeline: [...SocTrial],
+    repetitions: 5
+  });
+  timeline.push(MainTaskStart);
+  timeline.push({
+    timeline: [...SocTrial],
+    repetitions: 100
+  });
+  timeline.push(ShortBreakTrial);
+  timeline.push({
+    timeline: [...SocTrial],
+    repetitions: 100
+  });
+}
+// Decide random order for post-surveys and push accordingly
+  const postSocialFirst = Math.random() < 0.5;
+  // record order choice in data
+  jsPsych.data.addProperties({ postSocialFirst });
+  if (postSocialFirst) {
+    timeline.push(MechPostTest);
+    timeline.push(MechConfTest);
+    timeline.push(socFreqTest);
+    timeline.push(nonsocFreqTest);
+  } else {
+    timeline.push(MechPostTest);
+    timeline.push(MechConfTest);
+    timeline.push(nonsocFreqTest);
+    timeline.push(socFreqTest);
+  }
+console.log("postSocialFirst =",postSocialFirst);
+
+timeline.push(save_data);
+timeline.push(ProlificCode);
+
+jsPsych.run(timeline);
+
+</script>
+</html>
